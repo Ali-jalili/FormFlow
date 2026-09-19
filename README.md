@@ -47,7 +47,7 @@ A modern full-stack form builder built with React and Supabase, enabling users t
 - Built a dynamic form builder supporting multiple field types with drag-and-drop interactions.
 - Designed a scalable database schema using JSON-based field configurations and flexible response storage.
 - Implemented full CRUD functionality for forms, fields, and responses using Supabase.
-- Managed complex client-side state using Context API and useReducer.
+- Managed complex client-side state using Context API.
 - Managed server state with TanStack React Query, including caching, synchronization, and background updates.
 - Implemented a draft/publish workflow with dirty state tracking.
 - Developed secure public form submission with backend validation.
