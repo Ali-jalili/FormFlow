@@ -1,15 +1,13 @@
 -- ============================================================================
 -- FormFlow · 0002 · Server-side validation RPC
--- Provides `submit_form_response` which validates a submission against the
--- form's current fields (required, type, size) inside a single transaction.
--- The client still calls `supabase.from("responses").insert(...)` as a
--- fallback, but for a resilient production setup you would swap the client
--- call to `supabase.rpc("submit_form_response", {...})` — the RPC enforces
--- rules the client cannot.
+-- p_public_id is TEXT (matches forms.public_id).
 -- ============================================================================
 
+-- drop old uuid signature if it exists from a previous run
+drop function if exists public.submit_form_response(uuid, jsonb);
+
 create or replace function public.submit_form_response(
-  p_public_id uuid,
+  p_public_id text,
   p_data jsonb
 )
 returns uuid
@@ -19,12 +17,11 @@ set search_path = public
 as $$
 declare
   v_form   public.forms%rowtype;
-  v_fields public.form_fields%rowtype;
+  v_field  public.form_fields%rowtype;
   v_result uuid;
   v_ans    jsonb;
-  v_err    text;
+  v_text   text;
 begin
-  -- Load the form (must be published + public).
   select * into v_form
   from public.forms
   where public_id = p_public_id and is_published = true;
@@ -33,7 +30,6 @@ begin
     raise exception 'Form not found or not published' using errcode = 'P0001';
   end if;
 
-  -- Basic payload guards.
   if p_data is null or jsonb_typeof(p_data) <> 'object' then
     raise exception 'Response payload must be a JSON object' using errcode = '22P02';
   end if;
@@ -42,33 +38,42 @@ begin
     raise exception 'Too many fields in response' using errcode = '22025';
   end if;
 
-  -- Validate against each known field.
-  for v_fields in
+  for v_field in
     select * from public.form_fields where form_id = v_form.id
   loop
-    begin
-      v_ans := p_data -> v_fields.id::text;
-    exception when others then
-      v_ans := null;
-    end;
+    v_ans := p_data -> v_field.id::text;
 
-    if v_fields.required and (v_ans is null or v_ans = '""'::jsonb) then
-      raise exception 'Field "%" is required' using errcode = '23514';
+    if v_field.required and (v_ans is null or v_ans = '""'::jsonb) then
+      raise exception 'Field "%" is required', v_field.label using errcode = '23514';
     end if;
 
     if v_ans is not null then
-      if v_fields.type in ('short_text', 'long_text') then
+      if v_field.type in ('short_text', 'long_text') then
         if jsonb_typeof(v_ans) <> 'string' then
-          raise exception 'Field "%" must be a text answer' using errcode = '22P02';
+          raise exception 'Field "%" must be a text answer', v_field.label using errcode = '22P02';
         end if;
-        if length(v_ans::text) > 10000 then
-          raise exception 'Field "%" answer is too long' using errcode = '22025';
+        v_text := v_ans #>> '{}';
+        if length(v_text) > 10000 then
+          raise exception 'Field "%" answer is too long', v_field.label using errcode = '22025';
+        end if;
+
+      elsif v_field.type = 'multiple_choice' then
+        if jsonb_typeof(v_ans) <> 'string' then
+          raise exception 'Field "%" must be a string option', v_field.label using errcode = '22P02';
+        end if;
+        v_text := v_ans #>> '{}';
+        if v_field.options is not null and jsonb_typeof(v_field.options) = 'array' then
+          if not exists (
+            select 1 from jsonb_array_elements_text(v_field.options) as opt
+            where opt = v_text
+          ) then
+            raise exception 'Field "%" has an invalid option', v_field.label using errcode = '23514';
+          end if;
         end if;
       end if;
     end if;
   end loop;
 
-  -- Insert the response.
   insert into public.responses (form_id, data)
   values (v_form.id, p_data)
   returning id into v_result;
@@ -77,4 +82,4 @@ begin
 end;
 $$;
 
-grant execute on function public.submit_form_response(uuid, jsonb) to anon, authenticated;
+grant execute on function public.submit_form_response(text, jsonb) to anon, authenticated;
