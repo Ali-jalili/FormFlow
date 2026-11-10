@@ -16,7 +16,16 @@ function usePublicForm(publicId) {
       .single();
 
     if (formError) {
-      throw new Error(formError.message);
+      // PGRST116 = "no rows": either the public_id doesn't exist or the
+      // form was unpublished. Tag the error so the UI can show a friendly
+      // "unavailable" screen instead of a raw Supabase message.
+      const error = new Error(
+        formError.code === "PGRST116"
+          ? "This form is not available."
+          : formError.message,
+      );
+      error.code = formError.code;
+      throw error;
     }
 
     const { data: fieldsData, error: fieldsError } = await supabase

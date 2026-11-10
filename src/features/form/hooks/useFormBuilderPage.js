@@ -100,7 +100,9 @@ function useFormBuilderPage() {
   ]);
 
   useEffect(() => {
-    if (!formData?.public_id) {
+    // A form with a leftover public_id but is_published = false is
+    // unpublished — never show the live banner in that case.
+    if (!formData?.public_id || !formData?.is_published) {
       setPublishedUrl(null);
       return;
     }
@@ -115,7 +117,7 @@ function useFormBuilderPage() {
     }
 
     setPublishedUrl(`${window.location.origin}/form/${formData.public_id}`);
-  }, [formData?.public_id, formId]);
+  }, [formData?.public_id, formData?.is_published, formId]);
 
   function dismissPublishedBanner() {
     if (formId && formData?.public_id) {

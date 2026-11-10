@@ -38,10 +38,31 @@ function PublicFormPage() {
   }
 
   if (error) {
+    const isUnavailable =
+      error.code === "PGRST116" || /not available/i.test(error.message);
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50/60 px-4">
-        <div className="w-full max-w-md">
-          <ErrorMessage message={error.message} />
+        <div className="w-full max-w-md text-center">
+          {isUnavailable ? (
+            <div className="rounded-3xl border border-slate-200/80 bg-white/80 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-md">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-500">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+
+              <h1 className="text-xl font-bold text-slate-900">
+                This form is no longer available
+              </h1>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                The link you followed may be outdated, or the form owner
+                unpublished it. Please contact the person who shared the form.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-slate-200/80 bg-white/80 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-md">
+              <ErrorMessage message={error.message} />
+            </div>
+          )}
         </div>
       </div>
     );
