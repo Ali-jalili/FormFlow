@@ -14,7 +14,7 @@ import {
 
 import usePublicForm from "../features/form/hooks/usePublicForm";
 import { submitResponse } from "../features/form/services/formsService";
-import { FORM_FIELD_TYPES } from "../features/form/utils/form.types";
+import { FORM_FIELD_TYPES } from "../features/form/utils/form.constants";
 
 import Spinner from "../components/ui/Spinner";
 import ErrorMessage from "../components/ui/ErrorMessage";

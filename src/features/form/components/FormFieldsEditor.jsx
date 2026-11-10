@@ -20,7 +20,7 @@ import {
 
 import SortableField from "./SortableField";
 import AddFieldSelect from "./AddFieldSelect";
-import { FORM_FIELD_TYPES } from "../utils/form.types";
+import { FORM_FIELD_TYPES } from "../utils/form.constants";
 import { LayoutGrid, Layers } from "lucide-react";
 
 export default function FormFieldsEditor() {

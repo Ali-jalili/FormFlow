@@ -1,6 +1,7 @@
 /** @format */
 
 import { supabase } from "../../../lib/supabaseClient";
+import { FORM_FIELD_TYPES } from "../utils/form.constants";
 
 async function createForm(userId) {
   const { data, error } = await supabase
@@ -16,7 +17,7 @@ async function createForm(userId) {
 }
 
 function normalizeOptions(field) {
-  if (field.type === "multiple_choice") {
+  if (field.type === FORM_FIELD_TYPES.MULTIPLE_CHOICE) {
     return (field.options || []).filter((opt) => opt && opt.trim() !== "");
   }
   return null;
