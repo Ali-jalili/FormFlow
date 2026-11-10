@@ -178,9 +178,13 @@ const MAX_ANSWER_LENGTH = 10_000;
  * RPC — see supabase/migrations.)
  */
 function sanitizeAnswers(answers) {
+  if (answers === null || answers === undefined || Array.isArray(answers)) {
+    throw new Error("Answers must be an object keyed by field id.");
+  }
+
   const cleaned = {};
 
-  for (const [key, value] of Object.entries(answers || {})) {
+  for (const [key, value] of Object.entries(answers)) {
     if (typeof key !== "string" || key.length > 64) continue;
 
     if (typeof value === "string") {
@@ -248,4 +252,7 @@ export {
   unpublishForm,
   submitResponse,
   deleteForm,
+  sanitizeAnswers,
+  MAX_ANSWER_KEYS,
+  MAX_ANSWER_LENGTH,
 };

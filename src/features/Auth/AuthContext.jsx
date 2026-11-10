@@ -43,7 +43,7 @@ function AuthProvider({ children }) {
     });
 
     if (error) {
-      throw error;
+      throw new Error(error.message);
     }
 
     setUser(data.user);
@@ -58,7 +58,7 @@ function AuthProvider({ children }) {
       options: { data: { name } },
     });
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
 
     // When email confirmation is enabled, Supabase creates the account but
     // no session exists yet — report that so the UI can tell the user to

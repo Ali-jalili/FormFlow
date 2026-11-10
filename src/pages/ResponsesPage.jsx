@@ -1,5 +1,6 @@
 /** @format */
 
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
 import useResponses from "../features/form/hooks/useResponses";
@@ -17,7 +18,17 @@ import {
   Inbox,
   Clock,
   Sparkles,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+const PAGE_SIZE = 20;
+
+function csvEscape(value) {
+  const str = value === null || value === undefined ? "" : String(value);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
 
 function ResponsesPage() {
   const { formId } = useParams();
@@ -26,7 +37,54 @@ function ResponsesPage() {
   const { data: fieldsData } = useFormFields(formId);
   const { data: formsList } = useForms();
 
+  const [page, setPage] = useState(0);
+
   const formData = formsList?.find((form) => form.id === formId);
+
+  const totalResponses = responses?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalResponses / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pagedResponses = useMemo(
+    () =>
+      (responses ?? []).slice(
+        safePage * PAGE_SIZE,
+        safePage * PAGE_SIZE + PAGE_SIZE,
+      ),
+    [responses, safePage],
+  );
+
+  function exportCsv() {
+    const fields = fieldsData ?? [];
+    const header = [
+      "Submission date",
+      ...fields.map((field) => field.label || field.id),
+    ];
+
+    const rows = (responses ?? []).map((response) => [
+      new Date(response.created_at).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      ...fields.map((field) => response.data?.[field.id] ?? ""),
+    ]);
+
+    const lines = [header, ...rows].map((row) => row.map(csvEscape).join(","));
+
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `form-${formId}-responses-${Date.now()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 
   if (isLoading) return <Spinner />;
 
@@ -79,32 +137,44 @@ function ResponsesPage() {
                 <div className="mt-1 flex items-center gap-2 text-xs font-medium text-slate-500">
                   <span className="inline-flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
-                    {responses.length}{" "}
-                    {responses.length === 1 ? "response" : "responses"} received
+                    {totalResponses}{" "}
+                    {totalResponses === 1 ? "response" : "responses"} received
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Response Total Counter Card */}
+            {/* Response Total Counter Card + Export */}
             <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 px-4 shadow-sm sm:shrink-0">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-lg font-bold leading-none text-slate-900">
-                  {responses.length}
+                  {totalResponses}
                 </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   Total Submissions
                 </p>
               </div>
+              {totalResponses > 0 && (
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  title="Export all responses to CSV"
+                  aria-label="Export responses to CSV"
+                  className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 active:translate-y-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Export CSV</span>
+                </button>
+              )}
             </div>
           </div>
         </header>
 
         {/* Empty State */}
-        {responses.length === 0 ? (
+        {totalResponses === 0 ? (
           <div className="flex min-h-[380px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white/60 p-8 text-center backdrop-blur-sm sm:p-12">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-400 shadow-inner">
               <Inbox className="h-8 w-8" />
@@ -148,9 +218,10 @@ function ResponsesPage() {
             </Link>
           </div>
         ) : (
-          /* Response List */
-          <div className="space-y-4">
-            {responses.map((response, index) => (
+          <>
+            {/* Response List (paged) */}
+            <div className="space-y-4">
+            {pagedResponses.map((response, index) => (
               <article
                 key={response.id}
                 className="
@@ -175,10 +246,10 @@ function ResponsesPage() {
                 <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-3.5 sm:px-6">
                   <div className="flex items-center gap-3">
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-xs font-bold text-indigo-600 ring-1 ring-indigo-500/10">
-                      #{index + 1}
+                      #{safePage * PAGE_SIZE + index + 1}
                     </span>
                     <p className="text-xs font-bold text-slate-800 sm:text-sm">
-                      Submission #{index + 1}
+                      Submission #{safePage * PAGE_SIZE + index + 1}
                     </p>
                   </div>
 
@@ -276,6 +347,38 @@ function ResponsesPage() {
               </article>
             ))}
           </div>
+
+          {/* Pagination (hidden when everything fits on one page) */}
+          {totalResponses > PAGE_SIZE && (
+            <div className="mt-6 flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                disabled={safePage === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Previous</span>
+              </button>
+
+              <span className="text-xs font-medium text-slate-500">
+                Page {safePage + 1} of {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages - 1, current + 1))
+                }
+                disabled={safePage >= totalPages - 1}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span>Next</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

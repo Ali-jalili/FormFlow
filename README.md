@@ -1,10 +1,49 @@
 # FormFlow
 
+![CI](https://github.com/Ali-jalili/FormFlow/actions/workflows/ci.yml/badge.svg)
+
 A modern full-stack form builder built with React and Supabase, enabling users to create, publish, and manage dynamic forms with flexible field configurations and response management.
 
 ## 🌐 Live Demo
 
-[https://YOUR_FORMFLOW_DEMO_URL](https://form-flow-fawn.vercel.app/)
+<https://form-flow-fawn.vercel.app/>
+
+## 🖼️ Screenshots
+
+<!-- Add screenshots/GIF here. Suggested files:
+     docs/screenshots/home.png, builder.png, public-form.png, responses.png -->
+
+| Home                               | Builder                                  |
+| ---------------------------------- | ---------------------------------------- |
+| ![Home](docs/screenshots/home.png) | ![Builder](docs/screenshots/builder.png) |
+
+| Public form                                      | Responses                                    |
+| ------------------------------------------------ | -------------------------------------------- |
+| ![Public form](docs/screenshots/public-form.png) | ![Responses](docs/screenshots/responses.png) |
+
+> **TODO:** drop real screenshots or a GIF into `docs/screenshots/` (the
+> placeholder paths above are ready to receive them).
+
+## 🏛️ Architecture
+
+```mermaid
+flowchart LR
+  UI[React UI<br/>pages & components]
+  H[Hooks<br/>usePublicForm / useSaveForm / useResponses]
+  S[Services<br/>formsService.js]
+  SUP[(Supabase<br/>Postgres + RLS)]
+  RPC[submit_form_response RPC<br/>server-side validation]
+  CACHE[React Query cache]
+
+  UI --> H --> S
+  S -->|CRUD + .order()| SUP
+  S -->|submitResponse| RPC --> SUP
+  SUP -->|data| CACHE --> UI
+```
+
+Data flow: **UI → hooks → services → Supabase (RLS) → React Query cache → UI**.
+Anonymous submissions are validated inside a Postgres transaction by the RPC,
+so the client's rules can't be bypassed.
 
 ---
 
@@ -62,11 +101,16 @@ A modern full-stack form builder built with React and Supabase, enabling users t
 2. `0002_validation_rpc.sql` — the `submit_form_response` RPC (server-side validation).
 3. `0003_restrict_direct_insert.sql` — drops the direct-insert policy on `responses`.
 4. `0004_column_grants.sql` — column-level grants limiting what `anon` can read.
+5. `0005_published_snapshot.sql` — adds an (optional) `published_snapshot` column.
+6. `0006_drop_is_saved.sql` — drops the unused `forms.is_saved` legacy column.
 
 > After step 3, **the RPC is the only way to submit a response** — direct
 > inserts into `responses` are no longer possible, so validation cannot be
-> bypassed. These files are not auto-applied; run each one in the Supabase
-> SQL editor (Dashboard → SQL Editor).
+> bypassed.
+>
+> Steps 1–4 are required for the app to work end-to-end. Steps 5–6 are
+> optional housekeeping. None of these are auto-applied: run each one in the
+> Supabase SQL editor (Dashboard → SQL Editor).
 
 ---
 
@@ -95,15 +139,44 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
 
+## 🧪 Testing
+
+- Unit + integration tests with **Vitest** and **React Testing Library**.
+- Run the full suite: `pnpm test` · watch mode: `pnpm test:watch`.
+- Tests cover `sanitizeAnswers` (size/shape guard rails), `isDraftDifferentFromServer`,
+  the public-form submission hook (required + invalid-option validation), and a
+  mocked end-to-end flow on `PublicFormPage`.
+- **CI** (`.github/workflows/ci.yml`) runs lint, build and tests on every
+  push/PR to `main` and `develop`.
+
+---
+
+## ⚠️ Known limitations
+
+- **No published snapshot yet.** A published form is answered against its
+  *live* fields, so editing the form changes what respondents see immediately.
+  Migration `0005_published_snapshot.sql` adds a `published_snapshot jsonb`
+  column to enable true freeze-at-publish; the client/RPC aren't wired to it
+  yet.
+- **`order` column name.** `form_fields.order` uses a SQL reserved word. It
+  works (quoted), but renaming to `position` would be cleaner — tracked in
+  Future Improvements to avoid a breaking change mid-project.
+- **Client-side pagination.** Responses are fetched in full and paged in the
+  browser; large forms will need server-side pagination (Supabase `range`).
+
+---
+
 ## 🚀 Future Improvements
 
+- Published-form snapshot (freeze at publish) — see `0005_published_snapshot.sql`.
+- Rename `form_fields.order` → `position` (reserved-word cleanup).
 - Form templates
 - Conditional fields and branching logic
 - File upload fields
 - Email notifications
-- Form analytics
-- Export responses (CSV / Excel)
-- Unit and integration testing
+- Form analytics / per-question charts
+- Server-side response pagination
+- Excel export (CSV export is already implemented)
 
 ---
 
