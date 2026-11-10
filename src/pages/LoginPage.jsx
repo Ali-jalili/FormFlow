@@ -1,7 +1,7 @@
 /** @format */
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { ArrowRight, Eye, EyeOff, Lock, LogIn, Mail } from "lucide-react";
@@ -11,6 +11,11 @@ import useAuth from "../features/Auth/useAuth";
 function LoginPage() {
   const { handleLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // When arriving via a ProtectedRoute redirect, return the user to the
+  // page they originally tried to reach instead of the dashboard.
+  const redirectTo = location.state?.from || "/dashboard";
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -31,7 +36,7 @@ function LoginPage() {
       await handleLogin(formData.email, formData.password);
 
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       toast.error(error.message || "Unable to log in. Please try again.");
     }

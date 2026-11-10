@@ -7,10 +7,11 @@ function useResponses(formId) {
   async function fetchResponses() {
     const { data, error } = await supabase
       .from("responses")
-      .select("*")
-      .eq("form_id", formId);
+      .select("id, form_id, data, created_at")
+      .eq("form_id", formId)
+      .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return data;
   }
 

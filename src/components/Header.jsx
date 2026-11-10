@@ -7,16 +7,16 @@ import { Layout, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 import useAuth from "../features/Auth/useAuth";
 
 function Header() {
-  const { user, handlelogout } = useAuth();
+  const { user, handleLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   function closeMenu() {
     setIsMenuOpen(false);
   }
 
-  async function handleLogout() {
+  async function onLogout() {
     closeMenu();
-    await handlelogout();
+    await handleLogout();
   }
 
   return (
@@ -78,7 +78,7 @@ function Header() {
 
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
               >
                 <LogOut className="h-4 w-4" />
@@ -166,7 +166,7 @@ function Header() {
 
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="flex items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold text-gray-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
               >
                 <LogOut className="h-4 w-4" />

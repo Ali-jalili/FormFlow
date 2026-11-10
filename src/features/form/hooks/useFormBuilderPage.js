@@ -1,6 +1,6 @@
 /** @format */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import useFormFields from "./useFormFields";
 import useFormDraft from "./useFormDraft";
 import useSaveForm from "./useSaveForm";
 import usePublishForm from "./usePublishForm";
+import useUnpublishForm from "./useUnpublishForm";
 import {
   DEFAULT_FORM_VALUES,
   isDraftDifferentFromServer,
@@ -47,6 +48,7 @@ function useFormBuilderPage() {
     formId,
     watch,
     !!formData && fieldsFetched,
+    user?.id,
   );
 
   const isFormSavedInDb = useMemo(
@@ -56,6 +58,8 @@ function useFormBuilderPage() {
         (fieldsData && fieldsData.length > 0)),
     [formData, fieldsData],
   );
+
+  const draftNotifiedRef = useRef(false);
 
   useEffect(() => {
     if (!formId || !fieldsFetched || !formData) return;
@@ -69,6 +73,16 @@ function useFormBuilderPage() {
     if (isDraftDifferentFromServer(draft, serverValues)) {
       reset(draft);
       setIsDraftActive(true);
+
+      // Make stale drafts visible instead of silently winning over the
+      // server state (which may have changed on another device).
+      if (!draftNotifiedRef.current) {
+        draftNotifiedRef.current = true;
+        toast(
+          "A local draft was restored. Review it before saving — it may be out of date.",
+          { icon: "📝" },
+        );
+      }
       return;
     }
 
@@ -139,6 +153,8 @@ function useFormBuilderPage() {
   const { mutateAsync: saveForm, isPending: isSaving } = useSaveForm(formId);
   const { mutateAsync: publish, isPending: isPublishing } =
     usePublishForm(formId);
+  const { mutateAsync: unpublish, isPending: isUnpublishing } =
+    useUnpublishForm(formId);
   const hasUnsavedChanges = isDirty || isDraftActive;
   const showUnsaved = !isFormSavedInDb || hasUnsavedChanges;
   const canPublish =
@@ -182,6 +198,18 @@ function useFormBuilderPage() {
     }
   }
 
+  async function handleUnpublish() {
+    try {
+      await unpublish();
+      setPublishedUrl(null);
+      toast.success("Form unpublished. The public link is now inactive.");
+    } catch {
+      toast.error("Failed to unpublish form.");
+    }
+  }
+
+  const isPublished = !!formData?.is_published && !!formData?.public_id;
+
   return {
     formId,
     formMethods,
@@ -194,9 +222,12 @@ function useFormBuilderPage() {
     dismissPublishedBanner,
     handleSave,
     handlePublish,
+    handleUnpublish,
     navigate,
     isSaving,
     isPublishing,
+    isUnpublishing,
+    isPublished,
     showUnsaved,
     canPublish,
   };

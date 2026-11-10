@@ -7,7 +7,6 @@ import {
   Send,
   CheckCircle2,
   Loader2,
-  Circle,
   FileText,
   AlertCircle,
   ShieldCheck,
@@ -15,6 +14,7 @@ import {
 
 import usePublicForm from "../features/form/hooks/usePublicForm";
 import { submitResponse } from "../features/form/services/formsService";
+import { FORM_FIELD_TYPES } from "../features/form/utils/form.types";
 
 import Spinner from "../components/ui/Spinner";
 import ErrorMessage from "../components/ui/ErrorMessage";
@@ -23,6 +23,8 @@ function PublicFormPage() {
   const [answers, setAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [submitError, setSubmitError] = useState(null);
 
   const { publicId } = useParams();
   const { data, isLoading, error } = usePublicForm(publicId);
@@ -47,9 +49,11 @@ function PublicFormPage() {
 
   function validateAnswers() {
     if (!data?.fields?.length) {
-      toast.error("This form has no fields to answer.");
+      setSubmitError("This form has no fields to answer.");
       return false;
     }
+
+    const errors = {};
 
     for (const field of data.fields) {
       if (!field.required) continue;
@@ -57,8 +61,7 @@ function PublicFormPage() {
       const answer = answers[field.id];
 
       if (!answer || (typeof answer === "string" && answer.trim() === "")) {
-        toast.error(`${field.label || "This field"} is required`);
-        return false;
+        errors[field.id] = `${field.label || "This field"} is required`;
       }
     }
 
@@ -71,11 +74,12 @@ function PublicFormPage() {
     });
 
     if (!hasAnyAnswer) {
-      toast.error("Please answer at least one question.");
-      return false;
+      setSubmitError("Please answer at least one question.");
     }
 
-    return true;
+    setFieldErrors(errors);
+
+    return Object.keys(errors).length === 0 && hasAnyAnswer;
   }
 
   async function handleSubmit() {
@@ -84,6 +88,7 @@ function PublicFormPage() {
     if (!validateAnswers()) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
 
     try {
       await submitResponse(data.form.id, answers);
@@ -92,10 +97,12 @@ function PublicFormPage() {
 
       setIsSubmitted(true);
       setAnswers({});
+      setFieldErrors({});
     } catch (error) {
       console.error("Submit error:", error);
-
-      toast.error("Failed to submit response.");
+      setSubmitError(
+        error?.message || "Failed to submit response. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -201,7 +208,10 @@ function PublicFormPage() {
                   >
                     {/* Label */}
                     <div className="mb-3">
-                      <label className="flex items-center justify-between text-xs font-bold text-slate-800 sm:text-sm">
+                      <label
+                        htmlFor={`field-${field.id}`}
+                        className="flex items-center justify-between text-xs font-bold text-slate-800 sm:text-sm"
+                      >
                         <span>
                           {field.label || "Untitled Field"}
                           {field.required && (
@@ -214,18 +224,40 @@ function PublicFormPage() {
                           </span>
                         )}
                       </label>
+                      {fieldErrors[field.id] && (
+                        <p
+                          id={`field-error-${field.id}`}
+                          role="alert"
+                          className="mt-1.5 text-xs font-medium text-rose-600"
+                        >
+                          {fieldErrors[field.id]}
+                        </p>
+                      )}
                     </div>
 
                     {/* Short text */}
-                    {field.type === "short_text" && (
+                    {field.type === FORM_FIELD_TYPES.SHORT_TEXT && (
                       <input
+                        id={`field-${field.id}`}
+                        aria-describedby={
+                          fieldErrors[field.id]
+                            ? `field-error-${field.id}`
+                            : undefined
+                        }
                         value={answer}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setAnswers((current) => ({
                             ...current,
                             [field.id]: e.target.value,
-                          }))
-                        }
+                          }));
+                          if (fieldErrors[field.id]) {
+                            setFieldErrors((current) => {
+                              const next = { ...current };
+                              delete next[field.id];
+                              return next;
+                            });
+                          }
+                        }}
                         type="text"
                         placeholder="Type your answer..."
                         disabled={isSubmitting}
@@ -234,15 +266,28 @@ function PublicFormPage() {
                     )}
 
                     {/* Long text */}
-                    {field.type === "long_text" && (
+                    {field.type === FORM_FIELD_TYPES.LONG_TEXT && (
                       <textarea
+                        id={`field-${field.id}`}
+                        aria-describedby={
+                          fieldErrors[field.id]
+                            ? `field-error-${field.id}`
+                            : undefined
+                        }
                         value={answer}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setAnswers((current) => ({
                             ...current,
                             [field.id]: e.target.value,
-                          }))
-                        }
+                          }));
+                          if (fieldErrors[field.id]) {
+                            setFieldErrors((current) => {
+                              const next = { ...current };
+                              delete next[field.id];
+                              return next;
+                            });
+                          }
+                        }}
                         rows={4}
                         placeholder="Type your answer..."
                         disabled={isSubmitting}
@@ -251,34 +296,18 @@ function PublicFormPage() {
                     )}
 
                     {/* Multiple choice */}
-                    {field.type === "multiple_choice" && (
-                      <div className="space-y-2.5">
+                    {field.type === FORM_FIELD_TYPES.MULTIPLE_CHOICE && (
+                      <div role="radiogroup" className="space-y-2.5">
                         {field.options
                           ?.filter((opt) => opt && opt.trim() !== "")
                           .map((opt, i) => {
+                            const inputId = `${field.id}-opt-${i}`;
                             const selected = answers[field.id] === opt;
 
                             return (
-                              <button
-                                key={`${field.id}-${i}`}
-                                type="button"
-                                disabled={isSubmitting}
-                                onClick={() =>
-                                  setAnswers((current) => {
-                                    const currentAnswer = current[field.id];
-
-                                    if (currentAnswer === opt) {
-                                      const next = { ...current };
-                                      delete next[field.id];
-                                      return next;
-                                    }
-
-                                    return {
-                                      ...current,
-                                      [field.id]: opt,
-                                    };
-                                  })
-                                }
+                              <label
+                                key={inputId}
+                                htmlFor={inputId}
                                 className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-all duration-200 ${
                                   selected
                                     ? "border-indigo-500 bg-indigo-50/70 shadow-sm ring-1 ring-indigo-500/20"
@@ -289,13 +318,40 @@ function PublicFormPage() {
                                     : "cursor-pointer"
                                 }`}
                               >
-                                {selected ? (
-                                  <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-indigo-600 bg-indigo-600">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                                  </div>
-                                ) : (
-                                  <Circle className="h-4 w-4 shrink-0 text-slate-300" />
-                                )}
+                                <input
+                                  id={inputId}
+                                  type="radio"
+                                  name={`field-${field.id}`}
+                                  value={opt}
+                                  disabled={isSubmitting}
+                                  checked={selected}
+                                  onChange={() => {
+                                    setAnswers((current) => ({
+                                      ...current,
+                                      [field.id]: opt,
+                                    }));
+                                    if (fieldErrors[field.id]) {
+                                      setFieldErrors((current) => {
+                                        const next = { ...current };
+                                        delete next[field.id];
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                  className="peer sr-only"
+                                />
+                                <span
+                                  aria-hidden="true"
+                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                    selected
+                                      ? "border-indigo-600 bg-indigo-600"
+                                      : "border-slate-300 bg-white"
+                                  }`}
+                                >
+                                  {selected && (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                  )}
+                                </span>
 
                                 <span
                                   className={`text-xs font-medium sm:text-sm ${
@@ -306,7 +362,7 @@ function PublicFormPage() {
                                 >
                                   {opt}
                                 </span>
-                              </button>
+                              </label>
                             );
                           })}
                       </div>
@@ -318,6 +374,15 @@ function PublicFormPage() {
 
             {/* Submit Action Block */}
             <div className="mt-10 border-t border-slate-100 pt-6">
+              {submitError && (
+                <p
+                  role="alert"
+                  className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700"
+                >
+                  {submitError}
+                </p>
+              )}
+
               <button
                 type="button"
                 onClick={handleSubmit}

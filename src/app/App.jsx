@@ -1,6 +1,6 @@
 /** @format */
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation, matchPath } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -17,20 +17,35 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Public form routes get a clean, minimal layout (no app chrome),
+ * so anonymous respondents don't see the dashboard Header/Footer.
+ */
+function AppLayout() {
+  const { pathname } = useLocation();
+  const isPublicForm = !!matchPath("/form/:publicId", pathname);
+
+  return (
+    <>
+      <Toaster position="top-right" />
+      <ReactQueryDevtools initialIsOpen={false} />
+      <div className="min-h-screen flex flex-col">
+        {!isPublicForm && <Header />}
+        <main className="flex-1">
+          <AppRoutes />
+        </main>
+        {!isPublicForm && <Footer />}
+      </div>
+    </>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <Toaster position="top-right" />
-          <ReactQueryDevtools initialIsOpen={false} />
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-1">
-              <AppRoutes />
-            </main>
-            <Footer />
-          </div>
+          <AppLayout />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

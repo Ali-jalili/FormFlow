@@ -48,10 +48,22 @@ function SignupPage() {
     setIsLoading(true);
 
     try {
-      await handleSignup(values.email, values.password, values.name);
+      const result = await handleSignup(
+        values.email,
+        values.password,
+        values.name,
+      );
 
-      toast.success("Account created! Welcome aboard!");
-      navigate("/dashboard");
+      if (result?.needsEmailConfirmation) {
+        toast.success(
+          "Account created! Check your inbox to confirm your email, then log in.",
+          { duration: 8000 },
+        );
+        navigate("/login", { replace: true });
+      } else {
+        toast.success("Account created! Welcome aboard!");
+        navigate("/dashboard", { replace: true });
+      }
     } catch (error) {
       toast.error(error.message || "Failed to create account.");
     } finally {

@@ -228,6 +228,50 @@ function ResponsesPage() {
                       </div>
                     );
                   })}
+
+                  {/* Orphaned answers: submitted for fields that no longer
+                      exist on the form (deleted between submit and now). */}
+                  {(() => {
+                    const currentFieldIds = new Set(
+                      fieldsData?.map((f) => f.id) ?? [],
+                    );
+                    const orphanedEntries = Object.entries(
+                      response.data ?? {},
+                    ).filter(
+                      ([fieldId]) =>
+                        !currentFieldIds.has(fieldId) &&
+                        String(response.data?.[fieldId] ?? "").trim() !== "",
+                    );
+
+                    if (orphanedEntries.length === 0) return null;
+
+                    return (
+                      <div className="py-3.5">
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                          Legacy answers
+                        </p>
+                        <p className="mb-2 text-[11px] italic text-slate-400">
+                          Answers to questions that were later removed from this
+                          form.
+                        </p>
+                        <div className="space-y-1.5">
+                          {orphanedEntries.map(([fieldId, answer]) => (
+                            <div
+                              key={fieldId}
+                              className="rounded-lg bg-slate-50 px-3 py-2"
+                            >
+                              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                                {fieldId}
+                              </p>
+                              <p className="whitespace-pre-wrap break-words text-sm font-medium text-slate-700">
+                                {String(answer)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </article>
             ))}

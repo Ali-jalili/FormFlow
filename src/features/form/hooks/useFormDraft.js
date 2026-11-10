@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 
-function useFormDraft(formId, watch, enabled = false) {
+function useFormDraft(formId, watch, enabled = false, namespace) {
+  // Namespacing by the signed-in user keeps drafts of different accounts
+  // on the same browser from ever leaking into each other.
   const draftKey = useMemo(
-    () => (formId ? `form-draft-${formId}` : null),
-    [formId],
+    () => (formId ? `form-draft-${namespace ?? ""}-${formId}` : null),
+    [formId, namespace],
   );
 
   const getDraft = useCallback(() => {

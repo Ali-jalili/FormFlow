@@ -22,9 +22,12 @@ function FormBuilderPage() {
     dismissPublishedBanner,
     handleSave,
     handlePublish,
+    handleUnpublish,
     navigate,
     isSaving,
     isPublishing,
+    isUnpublishing,
+    isPublished,
     showUnsaved,
     canPublish,
   } = useFormBuilderPage();
@@ -52,8 +55,11 @@ function FormBuilderPage() {
           showPreview={showPreview}
           onSave={formMethods.handleSubmit(handleSave)}
           onPublish={handlePublish}
+          onUnpublish={handleUnpublish}
           isSaving={isSaving}
           isPublishing={isPublishing}
+          isUnpublishing={isUnpublishing}
+          isPublished={isPublished}
           isDirty={showUnsaved}
           canPublish={canPublish}
         />
