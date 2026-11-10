@@ -116,14 +116,17 @@ so the client's rules can't be bypassed.
 
 ## 📦 Installation
 
+> **Requires Node 24** (see `.nvmrc`) and **pnpm**. On Node 20 the Vitest
+> test worker crashes due to an `undici@8` incompatibility — use Node 24.
+
 ```bash
 git clone https://github.com/Ali-jalili/FormFlow.git
 
 cd FormFlow
 
-npm install
-
-npm run dev
+nvm use            # loads Node 24 from .nvmrc
+pnpm install       # install dependencies (frozen lockfile)
+pnpm dev           # start the dev server
 ```
 
 ---

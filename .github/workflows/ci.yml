@@ -24,9 +24,11 @@ jobs:
           version: 10
 
       - name: Setup Node
+        # Node 24 (matches the dev environment). Node 20 crashes the Vitest
+        # forks worker via an undici@8 incompatibility (hoisted dep).
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
