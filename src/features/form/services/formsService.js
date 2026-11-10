@@ -15,11 +15,22 @@ async function createForm(userId) {
   return data;
 }
 
+function normalizeOptions(field) {
+  if (field.type === "multiple_choice") {
+    return (field.options || []).filter((opt) => opt && opt.trim() !== "");
+  }
+  return null;
+}
+
+/**
+ * Diff-based save using only INSERT and DELETE — deliberately no UPDATE or
+ * upsert, because the database RLS policies only allow insert/delete on
+ * form_fields. Unchanged fields keep their rows (stable ordering); changed
+ * fields are re-created so their values are fresh.
+ */
 async function saveFormFields(formId, fields) {
-  // Compute the diff so we never wipe-and-recreate every field on each save.
-  // This makes saves safe: a failed insert can't silently drop existing
-  // fields, and unchanged fields keep their stored rows (stable ordering).
   const existing = await getFormFields(formId);
+  const existingById = new Map(existing.map((field) => [field.id, field]));
 
   const normalized = fields.map((field) => ({
     id: field.id,
@@ -27,42 +38,59 @@ async function saveFormFields(formId, fields) {
     type: field.type,
     label: field.label,
     required: field.required,
-    options:
-      field.type === "multiple_choice"
-        ? (field.options || []).filter((opt) => opt && opt.trim() !== "")
-        : field.options,
+    options: normalizeOptions(field),
     order: field.order,
   }));
 
   const nextIds = new Set(normalized.map((field) => field.id));
 
-  // 1) Delete fields that no longer exist in the builder.
-  const toDelete = existing.filter((field) => !nextIds.has(field.id));
+  // 1) Fields removed from the builder.
+  const removedIds = existing
+    .filter((field) => !nextIds.has(field.id))
+    .map((field) => field.id);
+
+  // 2) Existing fields whose content changed (re-create them, since the DB
+  //    has no UPDATE policy for form_fields).
+  const changed = normalized.filter((field) => {
+    const old = existingById.get(field.id);
+    if (!old) return false;
+
+    return (
+      old.type !== field.type ||
+      old.label !== field.label ||
+      old.required !== field.required ||
+      old.order !== field.order ||
+      JSON.stringify(normalizeOptions(old)) !== JSON.stringify(field.options)
+    );
+  });
+
+  // 3) Brand-new fields.
+  const fresh = normalized.filter((field) => !existingById.has(field.id));
+
+  const toDelete = [...removedIds, ...changed.map((field) => field.id)];
   if (toDelete.length > 0) {
     const { error: deleteError } = await supabase
       .from("form_fields")
       .delete()
       .eq("form_id", formId)
-      .in(
-        "id",
-        toDelete.map((field) => field.id),
-      );
+      .in("id", toDelete);
 
     if (deleteError) throw new Error(deleteError.message);
   }
 
-  // 2) Upsert new + changed fields (updates keep the same row and ordering).
-  if (normalized.length > 0) {
+  const toInsert = [...changed, ...fresh];
+  if (toInsert.length > 0) {
     const { data, error } = await supabase
       .from("form_fields")
-      .upsert(normalized, { onConflict: "id" })
+      .insert(toInsert)
       .select();
 
     if (error) throw new Error(error.message);
     return data;
   }
 
-  return [];
+  // Nothing to insert — return the fields that survive.
+  return existing.filter((field) => nextIds.has(field.id));
 }
 
 async function getFormsByUser(userId) {
