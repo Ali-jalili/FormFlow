@@ -1,20 +1,64 @@
 /** @format */
 
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
   ChevronRight,
+  FileText,
   GripVertical,
   Layout,
+  Link2,
+  Lock,
   MessageSquareText,
   Plus,
   Send,
   Share2,
+  ShieldCheck,
   Sparkles,
   Zap,
 } from "lucide-react";
+
+function Reveal({ children, className = "", delay = 0 }) {
+  const [isVisible, setIsVisible] = useState(
+    () => typeof IntersectionObserver === "undefined",
+  );
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(element);
+        }
+      },
+      { threshold: 0.12 },
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`home-reveal ${
+        isVisible ? "home-reveal--visible" : "home-reveal--hidden"
+      } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
 
 function HomePage() {
   const features = [
@@ -22,23 +66,23 @@ function HomePage() {
       icon: Layout,
       title: "Drag & Drop Builder",
       description:
-        "Build polished forms quickly with flexible fields and an intuitive editor.",
+        "Compose forms with a visual editor — reorder fields, set them as required, and preview everything live as you go.",
       iconClass:
         "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white",
     },
     {
       icon: Share2,
-      title: "Instant Sharing",
+      title: "Stable Public Links",
       description:
-        "Publish your form in one click and share it with a simple public link.",
+        "Publish in one click and share a link that stays the same — even when you republish or unpublish and republish again.",
       iconClass:
         "bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white",
     },
     {
-      icon: BarChart3,
-      title: "Smart Analytics",
+      icon: FileText,
+      title: "Response Dashboard",
       description:
-        "Turn submitted responses into clear insights and useful visual reports.",
+        "Review every submission in a clean, ordered view — including answers to questions you've since removed — and export to CSV in one click.",
       iconClass:
         "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white",
     },
@@ -74,31 +118,33 @@ function HomePage() {
         {/* Background Ambient Glow & Grid Pattern */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
-          <div className="absolute left-1/2 top-[-100px] h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-200/60 to-purple-200/60 blur-3xl" />
-          <div className="absolute left-[-100px] top-[300px] h-72 w-72 rounded-full bg-purple-200/40 blur-3xl" />
-          <div className="absolute right-[-100px] top-[200px] h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl" />
+          <div className="home-orb absolute left-1/2 top-[-100px] h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-200/60 to-purple-200/60 blur-3xl" />
+          <div className="home-orb home-orb--delayed absolute left-[-100px] top-[300px] h-72 w-72 rounded-full bg-purple-200/40 blur-3xl" />
+          <div className="home-orb absolute right-[-100px] top-[200px] h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl" />
         </div>
 
         <div className="mx-auto max-w-7xl">
           {/* Hero Copy */}
-          <div className="mx-auto max-w-4xl text-center">
+          <Reveal className="mx-auto max-w-4xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200/80 bg-indigo-50/80 px-4 py-1.5 text-xs font-semibold text-indigo-700 backdrop-blur-md transition-all hover:scale-105">
               <Sparkles className="h-3.5 w-3.5 animate-pulse text-indigo-600" />
-              <span>Now in Public Beta</span>
+              <span>Free to try</span>
               <span className="h-1 w-1 rounded-full bg-indigo-400" />
-              <span className="text-indigo-500 font-normal">v1.0</span>
+              <span className="text-indigo-500 font-normal">
+                No credit card
+              </span>
             </div>
 
             <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-gray-950 sm:text-6xl lg:text-7xl">
-              Forms that{" "}
-              <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient">
-                work for you
+              Build, share, and{" "}
+              <span className="home-gradient-text bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-[length:200%_auto] bg-clip-text text-transparent">
+                collect responses
               </span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-gray-600 sm:text-lg sm:leading-8">
-              Create intuitive forms in minutes, share them instantly, and
-              transform raw submissions into actionable insight.
+              Create a form in minutes, keep one dependable link as it evolves,
+              and review every submission in one tidy dashboard.
             </p>
 
             {/* CTA Group */}
@@ -119,14 +165,14 @@ function HomePage() {
                 <ChevronRight className="h-4 w-4 text-gray-400" />
               </a>
             </div>
-          </div>
+          </Reveal>
 
           {/* =====================================================
               PRODUCT PREVIEW
           ===================================================== */}
-          <div className="relative mx-auto mt-16 max-w-6xl sm:mt-20">
+          <Reveal className="relative mx-auto mt-16 max-w-6xl sm:mt-20">
             {/* Floating Card 1: Status */}
-            <div className="absolute -bottom-6 left-4 z-20 hidden items-center gap-3 rounded-2xl border border-white/60 bg-white/80 p-3.5 shadow-2xl shadow-indigo-900/10 backdrop-blur-md sm:flex lg:-left-6">
+            <div className="home-float absolute -bottom-6 left-4 z-20 hidden items-center gap-3 rounded-2xl border border-white/60 bg-white/80 p-3.5 shadow-2xl shadow-indigo-900/10 backdrop-blur-md sm:flex lg:-left-6">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100/80 text-emerald-600">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
@@ -135,23 +181,23 @@ function HomePage() {
                   Status
                 </p>
                 <p className="text-xs font-bold text-gray-800">
-                  Collecting responses
+                  Form published
                 </p>
               </div>
             </div>
 
-            {/* Floating Card 2: Analytics */}
-            <div className="absolute -right-6 -top-6 z-20 hidden rounded-2xl border border-white/60 bg-white/80 p-4 shadow-2xl shadow-indigo-900/10 backdrop-blur-md lg:block">
+            {/* Floating Card 2: Shareable Link */}
+            <div className="home-float home-float--delayed absolute -right-6 -top-6 z-20 hidden rounded-2xl border border-white/60 bg-white/80 p-4 shadow-2xl shadow-indigo-900/10 backdrop-blur-md lg:block">
               <div className="flex items-center gap-3.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100/80 text-indigo-600">
-                  <BarChart3 className="h-5 w-5" />
+                  <Link2 className="h-5 w-5" />
                 </div>
                 <div className="text-left pr-2">
                   <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                    Live Submissions
+                    Ready to share
                   </p>
                   <p className="text-base font-extrabold text-gray-900">
-                    1,248
+                    Public form link
                   </p>
                 </div>
               </div>
@@ -326,7 +372,7 @@ function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -338,7 +384,7 @@ function HomePage() {
         className="relative border-t border-gray-100 bg-gray-50/50 px-4 py-24 sm:px-6 lg:px-8"
       >
         <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-16 max-w-2xl text-center">
+          <Reveal className="mx-auto mb-16 max-w-2xl text-center">
             <span className="text-xs font-bold tracking-widest text-indigo-600 uppercase">
               Powerful Capabilities
             </span>
@@ -348,16 +394,14 @@ function HomePage() {
             <p className="mt-3 text-base text-gray-600">
               Everything required to collect high-quality data without friction.
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={feature.title}
-                  className="group relative rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 text-left"
-                >
+            {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Reveal key={feature.title} delay={index * 100} className="h-full">
+                <div className="group relative h-full rounded-2xl border border-gray-200/80 bg-white p-8 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10">
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${feature.iconClass}`}
                   >
@@ -370,8 +414,87 @@ function HomePage() {
                     {feature.description}
                   </p>
                 </div>
-              );
+              </Reveal>
+            );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          SECURITY / PRIVACY (differentiator, all actually shipped)
+      ========================================================= */}
+      <section
+        id="security"
+        className="border-t border-gray-100 bg-slate-950 px-4 py-24 text-white sm:px-6 lg:px-8"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <Reveal>
+              <span className="text-xs font-bold tracking-widest text-indigo-400 uppercase">
+                Built safe by default
+              </span>
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+                Your data, protected at the database layer
+              </h2>
+              <p className="mt-4 max-w-lg text-base leading-relaxed text-slate-400">
+                Every table in FormFlow is guarded by Row Level Security. People
+                opening your link only ever see your form — never who owns it or
+                your other responses.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {[
+                  "Row Level Security",
+                  "Anonymous access",
+                  "Validated submissions",
+                ].map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </Reveal>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  icon: Lock,
+                  title: "Isolated by owner",
+                  body: "Owners manage only their own forms, fields and responses.",
+                },
+                {
+                  icon: ShieldCheck,
+                  title: "Server-validated",
+                  body: "Submissions pass a Postgres check — required fields, types and size.",
+                },
+                {
+                  icon: Link2,
+                  title: "Links that last",
+                  body: "Re-publishing never breaks a link you already shared.",
+                },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal key={item.title} delay={index * 100}>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left transition-colors hover:border-indigo-400/40 hover:bg-white/10">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="mt-4 text-sm font-bold text-white">
+                        {item.title}
+                      </h3>
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+                        {item.body}
+                      </p>
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
@@ -384,20 +507,24 @@ function HomePage() {
         className="px-4 py-24 sm:px-6 lg:px-8 bg-white"
       >
         <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-16 max-w-2xl text-center">
+          <Reveal className="mx-auto mb-16 max-w-2xl text-center">
             <span className="text-xs font-bold tracking-widest text-indigo-600 uppercase">
               Workflow
             </span>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-950 sm:text-4xl">
               Three steps to results
             </h2>
-          </div>
+          </Reveal>
 
           <div className="relative grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
             <div className="absolute left-[16%] right-[16%] top-10 hidden border-t-2 border-dashed border-indigo-100 md:block" />
 
-            {steps.map((step) => (
-              <div key={step.number} className="relative z-10 text-center">
+            {steps.map((step, index) => (
+              <Reveal
+                key={step.number}
+                delay={index * 100}
+                className="relative z-10 text-center"
+              >
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-indigo-100 bg-white text-xl font-black text-indigo-600 shadow-xl shadow-indigo-100">
                   {step.number}
                 </div>
@@ -407,7 +534,7 @@ function HomePage() {
                 <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-gray-600">
                   {step.description}
                 </p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -420,7 +547,7 @@ function HomePage() {
         <div className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-indigo-600 px-6 py-16 text-center shadow-2xl shadow-indigo-500/30 sm:px-12 sm:py-20">
           <div className="pointer-events-none absolute inset-0 -z-0 bg-[radial-gradient(circle_at_top_right,#818cf8,transparent_50%)] opacity-50" />
 
-          <div className="relative z-10 mx-auto max-w-2xl">
+          <Reveal className="relative z-10 mx-auto max-w-2xl">
             <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
               Start capturing better responses today.
             </h2>
@@ -436,7 +563,7 @@ function HomePage() {
               Get Started Free
               <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
-          </div>
+          </Reveal>
         </div>
       </section>
     </div>

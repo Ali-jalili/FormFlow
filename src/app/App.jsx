@@ -24,17 +24,24 @@ const queryClient = new QueryClient({
 function AppLayout() {
   const { pathname } = useLocation();
   const isPublicForm = !!matchPath("/form/:publicId", pathname);
+  const isFormBuilder = !!matchPath("/builder/:formId", pathname);
 
   return (
     <>
       <Toaster position="top-right" />
       <ReactQueryDevtools initialIsOpen={false} />
-      <div className="min-h-screen flex flex-col">
-        {!isPublicForm && <Header />}
-        <main className="flex-1">
+      <div
+        className={
+          isFormBuilder
+            ? "flex h-screen flex-col overflow-hidden"
+            : "flex min-h-screen flex-col"
+        }
+      >
+        {!isPublicForm && !isFormBuilder && <Header />}
+        <main className={isFormBuilder ? "min-h-0 flex-1" : "flex-1"}>
           <AppRoutes />
         </main>
-        {!isPublicForm && <Footer />}
+        {!isPublicForm && !isFormBuilder && <Footer />}
       </div>
     </>
   );
