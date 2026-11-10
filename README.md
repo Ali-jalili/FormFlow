@@ -2,190 +2,204 @@
 
 ![CI](https://github.com/Ali-jalili/FormFlow/actions/workflows/ci.yml/badge.svg)
 
-A modern full-stack form builder built with React and Supabase, enabling users to create, publish, and manage dynamic forms with flexible field configurations and response management.
+**Build forms, publish shareable links, and review responses in one workspace.**
+FormFlow is a full-stack form builder built with React, Supabase, and PostgreSQL.
+It includes a drag-and-drop editor with a live preview, public form submissions,
+and a searchable, paginated response dashboard.
 
-## 🌐 Live Demo
+**Live demo:** [form-flow-fawn.vercel.app](https://form-flow-fawn.vercel.app/)
 
-<https://form-flow-fawn.vercel.app/>
+## Features
 
-## 🖼️ Screenshots
+- **Authentication and private workspaces** — sign up and sign in with Supabase
+  Auth; each account manages its own forms.
+- **Form dashboard** — create and delete forms, search by title, filter drafts
+  and published forms, and review workspace totals.
+- **Visual form builder** — add, edit, remove, and reorder short-text, long-text,
+  and multiple-choice questions; mark questions as required and configure
+  choice options.
+- **Live preview and local drafts** — preview changes as you edit; unsaved
+  changes are kept in browser storage and restored in the same user's workspace.
+- **Draft and publish workflow** — save a draft with or without questions,
+  publish only after adding at least one question, reuse the same public link
+  when republishing, and unpublish a live form.
+- **Public forms** — collect anonymous submissions with client-side feedback
+  and server-side validation.
+- **Response dashboard** — browse responses 20 at a time, search across answer
+  text and question labels, and export all responses as CSV.
+- **Safer CSV exports** — escape CSV syntax and neutralize spreadsheet formula
+  prefixes in exported values.
+- **Responsive interface** — layouts adapt across the public form, builder,
+  dashboard, and response views.
 
-<!-- Add screenshots/GIF here. Suggested files:
-     docs/screenshots/home.png, builder.png, public-form.png, responses.png -->
+## Tech stack
 
-| Home                               | Builder                                  |
-| ---------------------------------- | ---------------------------------------- |
-| ![Home](docs/screenshots/home.png) | ![Builder](docs/screenshots/builder.png) |
+| Area | Technologies |
+| --- | --- |
+| UI | React 19, JavaScript, Tailwind CSS 4, Lucide, Framer Motion |
+| Forms and navigation | React Hook Form, React Router 6 |
+| Server state | TanStack Query |
+| Backend | Supabase Auth, PostgreSQL, Row Level Security, PostgREST RPC |
+| Build and tests | Vite, Vitest, React Testing Library, ESLint |
+| Hosting | Vercel |
 
-| Public form                                      | Responses                                    |
-| ------------------------------------------------ | -------------------------------------------- |
-| ![Public form](docs/screenshots/public-form.png) | ![Responses](docs/screenshots/responses.png) |
-
-> **TODO:** drop real screenshots or a GIF into `docs/screenshots/` (the
-> placeholder paths above are ready to receive them).
-
-## 🏛️ Architecture
+## How it works
 
 ```mermaid
 flowchart LR
-  UI[React UI<br/>pages & components]
-  H[Hooks<br/>usePublicForm / useSaveForm / useResponses]
-  S[Services<br/>formsService.js]
-  SUP[(Supabase<br/>Postgres + RLS)]
-  RPC[submit_form_response RPC<br/>server-side validation]
-  CACHE[React Query cache]
-
-  UI --> H --> S
-  S -->|CRUD + .order()| SUP
-  S -->|submitResponse| RPC --> SUP
-  SUP -->|data| CACHE --> UI
+  Pages[React pages and components] --> Hooks[Feature hooks]
+  Hooks --> Services[Supabase service layer]
+  Services --> Auth[Supabase Auth]
+  Services --> DB[(PostgreSQL with RLS)]
+  Services --> RPC[Database RPCs]
+  RPC --> DB
+  Hooks --> Cache[TanStack Query cache]
+  Cache --> Pages
 ```
 
-Data flow: **UI → hooks → services → Supabase (RLS) → React Query cache → UI**.
-Anonymous submissions are validated inside a Postgres transaction by the RPC,
-so the client's rules can't be bypassed.
+The UI uses feature hooks to coordinate form state and server state. Data access
+is handled by the Supabase service layer, with React Hook Form for builder and
+authentication forms and TanStack Query for fetching, caching, and
+invalidating server data.
 
----
+## Security
 
-## 🚀 Features
+- Row Level Security is enabled for forms, fields, and responses. Authenticated
+  users can manage their own data; anonymous visitors can read only the
+  public-safe columns and fields of published forms.
+- Public submissions go through the `submit_form_response` PostgreSQL RPC.
+  Direct response inserts are restricted by migration `0003`; the RPC checks
+  that the form is published, validates required answers and field types,
+  limits payload size, and accepts only configured multiple-choice options.
+- Form saves use the authenticated `save_form_draft` RPC. It checks ownership
+  and saves the title and question list in a single transaction while
+  preserving the existing RLS policies.
+- Response pagination and search run through the authenticated
+  `get_form_responses_page` RPC, which also remains subject to RLS.
+- The browser uses only the Supabase project URL and public anon key. Never put
+  a Supabase service-role key or other server secret in a `VITE_` variable.
 
-- Dynamic form builder with multiple field types
-- Drag-and-drop field reordering
-- Live form preview
-- Draft and publish workflow
-- Full CRUD operations for forms, fields, and responses
-- Public form submission
-- Secure anonymous access
-- Responses dashboard with dynamic field mapping
-- Responsive user interface
+## Getting started
 
----
+### Prerequisites
 
-## 🛠 Tech Stack
+- Node.js 24 (the repository pins the major version in `.nvmrc`)
+- pnpm 10
+- A Supabase project
 
-### Frontend
-
-- React
-- JavaScript
-- React Router
-- TanStack React Query
-- Context API
-
-### Backend
-
-- Supabase
-- PostgreSQL
-- Supabase Authentication
-- Row Level Security (RLS)
-- Server-side validation RPC
-
----
-
-## ✨ Project Highlights
-
-- Built a dynamic form builder supporting multiple field types with drag-and-drop interactions.
-- Designed a scalable database schema using JSON-based field configurations and flexible response storage.
-- Implemented full CRUD functionality for forms, fields, and responses using Supabase, with **transaction-safe field saves** (diff-based upsert instead of delete-then-insert).
-- Managed client-side state with Context API and React Hook Form; managed server state with TanStack React Query, including caching, synchronization, and background updates.
-- Implemented a draft/publish workflow with dirty-state tracking, **stable public links** (re-publish keeps the same `public_id`), and an unpublish action.
-- Developed secure public form submission with **Row Level Security** plus a **server-side validation RPC** (`submit_form_response`).
-
-## 🗄️ Database & Security
-
-- Schema, indexes and RLS policies live in [`supabase/migrations`](./supabase/migrations) — see [`supabase/README.md`](./supabase/README.md) for the security model and setup.
-- Every table has RLS enabled. Anonymous visitors can only read a published form's minimal columns; owners manage their own forms, fields and responses.
-
-**Applying migrations (in order):**
-
-1. `0001_initial_schema.sql` — tables, indexes, `updated_at` trigger, RLS policies.
-2. `0002_validation_rpc.sql` — the `submit_form_response` RPC (server-side validation).
-3. `0003_restrict_direct_insert.sql` — drops the direct-insert policy on `responses`.
-4. `0004_column_grants.sql` — column-level grants limiting what `anon` can read.
-5. `0005_published_snapshot.sql` — adds an (optional) `published_snapshot` column.
-6. `0006_drop_is_saved.sql` — drops the unused `forms.is_saved` legacy column.
-
-> After step 3, **the RPC is the only way to submit a response** — direct
-> inserts into `responses` are no longer possible, so validation cannot be
-> bypassed.
->
-> Steps 1–4 are required for the app to work end-to-end. Steps 5–6 are
-> optional housekeeping. None of these are auto-applied: run each one in the
-> Supabase SQL editor (Dashboard → SQL Editor).
-
----
-
-## 📦 Installation
-
-> **Requires Node 24** (see `.nvmrc`) and **pnpm**. On Node 20 the Vitest
-> test worker crashes due to an `undici@8` incompatibility — use Node 24.
+### Install and run
 
 ```bash
 git clone https://github.com/Ali-jalili/FormFlow.git
-
 cd FormFlow
-
-nvm use            # loads Node 24 from .nvmrc
-pnpm install       # install dependencies (frozen lockfile)
-pnpm dev           # start the dev server
+nvm use
+pnpm install --frozen-lockfile
 ```
 
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file in the project root and add:
+Create a root-level `.env` file using `.env.example`:
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
----
+Apply the Supabase migrations described below, then start the development
+server:
 
-## 🧪 Testing
+```bash
+pnpm dev
+```
 
-- Unit + integration tests with **Vitest** and **React Testing Library**.
-- Run the full suite: `pnpm test` · watch mode: `pnpm test:watch`.
-- Tests cover `sanitizeAnswers` (size/shape guard rails), `isDraftDifferentFromServer`,
-  the public-form submission hook (required + invalid-option validation), and a
-  mocked end-to-end flow on `PublicFormPage`.
-- **CI** (`.github/workflows/ci.yml`) runs lint, build and tests on every
-  push/PR to `main` and `develop`.
+Vite prints the local URL when the server is ready.
 
----
+## Supabase setup
 
-## ⚠️ Known limitations
+Run the SQL files in `supabase/migrations/` **in numerical order**, from
+`0001_initial_schema.sql` through `0009_required_whitespace_validation.sql`,
+using the Supabase Dashboard SQL Editor or your usual migration workflow.
 
-- **No published snapshot yet.** A published form is answered against its
-  *live* fields, so editing the form changes what respondents see immediately.
-  Migration `0005_published_snapshot.sql` adds a `published_snapshot jsonb`
-  column to enable true freeze-at-publish; the client/RPC aren't wired to it
-  yet.
-- **`order` column name.** `form_fields.order` uses a SQL reserved word. It
-  works (quoted), but renaming to `position` would be cleaner — tracked in
-  Future Improvements to avoid a breaking change mid-project.
-- **Client-side pagination.** Responses are fetched in full and paged in the
-  browser; large forms will need server-side pagination (Supabase `range`).
+Migrations `0007` and `0008` are required for the current form-save and
+response-browsing implementations. Migration `0009` updates server-side
+required-answer validation. For an existing database, apply only migrations
+that have not already been applied, keeping the same order. After applying a
+function migration, refresh the PostgREST schema cache if the new RPC is not
+recognized:
 
----
+```sql
+NOTIFY pgrst, 'reload schema';
+```
 
-## 🚀 Future Improvements
+See [`supabase/README.md`](./supabase/README.md) for the migration list,
+application details, and database security model.
 
-- Published-form snapshot (freeze at publish) — see `0005_published_snapshot.sql`.
-- Rename `form_fields.order` → `position` (reserved-word cleanup).
-- Form templates
-- Conditional fields and branching logic
-- File upload fields
-- Email notifications
-- Form analytics / per-question charts
-- Server-side response pagination
-- Excel export (CSV export is already implemented)
+## Available scripts
 
----
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Start the Vite development server. |
+| `pnpm build` | Create the production build in `dist/`. |
+| `pnpm preview` | Preview the production build locally. |
+| `pnpm test` | Run the Vitest suite once. |
+| `pnpm test:watch` | Run Vitest in watch mode. |
+| `pnpm lint` | Run ESLint. |
 
-## 👨‍💻 Author
+## Tests and CI
+
+The test suite uses Vitest, jsdom, and React Testing Library. It covers form
+builder interactions, public-form validation and submission, response search
+and pagination contracts, CSV escaping, form-save behavior, and form utilities.
+Database calls are mocked in automated tests; use a configured Supabase project
+to verify migrations and live database behavior.
+
+GitHub Actions runs dependency installation, lint, production build, and tests
+for pushes and pull requests targeting `main` and `develop`. CI uses Node.js 24
+and pnpm 10.
+
+## Project structure
+
+```text
+src/
+  app/                 Application shell, routes, and protected routes
+  components/          Shared layout and UI components
+  features/
+    Auth/              Supabase authentication context and hook
+    form/
+      components/      Builder, preview, public form, and dashboard components
+      hooks/           Form, response, and submission workflows
+      services/        Supabase data access
+      utils/           Field constants, builder helpers, and CSV utilities
+  lib/                 Supabase client
+  pages/               Home, auth, dashboard, builder, public, and response pages
+supabase/
+  migrations/          PostgreSQL schema, policies, and RPC functions
+```
+
+## Current scope and limitations
+
+- **Published forms use live definitions.** The current client does not read or
+  write a frozen publish snapshot. Editing and saving a published form changes
+  the questions respondents see. Migration `0005` adds a `published_snapshot`
+  column as groundwork only; snapshot behavior is not implemented.
+- **Response views use current questions.** The response page and CSV export
+  map stored answers using the form's current field definitions. Answers for
+  questions later removed from a form are not presented as current questions.
+- **The response page is paginated, but CSV export fetches every response.**
+  Exporting very large forms can take longer and use more browser memory.
+- The builder currently supports short text, long text, and multiple choice.
+  Conditional logic, file uploads, templates, and per-question analytics are
+  outside the current feature set.
+
+## Deployment
+
+The project is configured for Vercel as a single-page application. Set
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the deployment environment,
+apply the required Supabase migrations, and deploy the repository. `vercel.json`
+rewrites application routes to `index.html` and enables long-lived caching for
+hashed assets.
+
+## Author
 
 **Ali Jalili**
 
-- GitHub: https://github.com/Ali-jalili
-- LinkedIn: https://linkedin.com/in/ali--jalili
+- [GitHub](https://github.com/Ali-jalili)
+- [LinkedIn](https://linkedin.com/in/ali--jalili)

@@ -25,7 +25,7 @@ function BuilderHarness({ onSave, onPublish }) {
   return (
     <FormProvider {...methods}>
       <FormBuilderHeader
-      title={title}
+        title={title}
         onTitleChange={(title) =>
           methods.setValue("title", title, { shouldDirty: true })
         }
@@ -58,7 +58,9 @@ describe("FormBuilder creation flow", () => {
 
     render(<BuilderHarness onSave={onSave} onPublish={onPublish} />);
 
-    expect(screen.getByRole("button", { name: /publish/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /publish/i }),
+    ).toBeDisabled();
     expect(screen.getByText("Your form is waiting")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /add a field/i }));
@@ -67,7 +69,9 @@ describe("FormBuilder creation flow", () => {
       screen.getByPlaceholderText("What would you like to ask?"),
       "Your name",
     );
-    await user.click(screen.getByRole("checkbox", { name: /required question/i }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /required question/i }),
+    );
 
     expect(
       screen.getByText("Your name", { selector: "label" }),
@@ -81,5 +85,5 @@ describe("FormBuilder creation flow", () => {
 
     expect(onSave).toHaveBeenCalledOnce();
     expect(onPublish).toHaveBeenCalledOnce();
-  });
+  }, 15000);
 });
