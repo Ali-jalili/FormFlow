@@ -23,75 +23,24 @@ function normalizeOptions(field) {
   return null;
 }
 
-/**
- * Diff-based save using only INSERT and DELETE — deliberately no UPDATE or
- * upsert, because the database RLS policies only allow insert/delete on
- * form_fields. Unchanged fields keep their rows (stable ordering); changed
- * fields are re-created so their values are fresh.
- */
-async function saveFormFields(formId, fields) {
-  const existing = await getFormFields(formId);
-  const existingById = new Map(existing.map((field) => [field.id, field]));
-
-  const normalized = fields.map((field) => ({
+async function saveFormDraft(formId, title, fields) {
+  const normalized = (fields || []).map((field, index) => ({
     id: field.id,
-    form_id: formId,
     type: field.type,
     label: field.label,
     required: field.required,
     options: normalizeOptions(field),
-    order: field.order,
+    order: index + 1,
   }));
 
-  const nextIds = new Set(normalized.map((field) => field.id));
-
-  // 1) Fields removed from the builder.
-  const removedIds = existing
-    .filter((field) => !nextIds.has(field.id))
-    .map((field) => field.id);
-
-  // 2) Existing fields whose content changed (re-create them, since the DB
-  //    has no UPDATE policy for form_fields).
-  const changed = normalized.filter((field) => {
-    const old = existingById.get(field.id);
-    if (!old) return false;
-
-    return (
-      old.type !== field.type ||
-      old.label !== field.label ||
-      old.required !== field.required ||
-      old.order !== field.order ||
-      JSON.stringify(normalizeOptions(old)) !== JSON.stringify(field.options)
-    );
+  const { data, error } = await supabase.rpc("save_form_draft", {
+    p_form_id: formId,
+    p_title: title,
+    p_fields: normalized,
   });
 
-  // 3) Brand-new fields.
-  const fresh = normalized.filter((field) => !existingById.has(field.id));
-
-  const toDelete = [...removedIds, ...changed.map((field) => field.id)];
-  if (toDelete.length > 0) {
-    const { error: deleteError } = await supabase
-      .from("form_fields")
-      .delete()
-      .eq("form_id", formId)
-      .in("id", toDelete);
-
-    if (deleteError) throw new Error(deleteError.message);
-  }
-
-  const toInsert = [...changed, ...fresh];
-  if (toInsert.length > 0) {
-    const { data, error } = await supabase
-      .from("form_fields")
-      .insert(toInsert)
-      .select();
-
-    if (error) throw new Error(error.message);
-    return data;
-  }
-
-  // Nothing to insert — return the fields that survive.
-  return existing.filter((field) => nextIds.has(field.id));
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 async function getFormsByUser(userId) {
@@ -130,12 +79,25 @@ async function getFormFields(formId) {
   return data;
 }
 
-async function updateFormTitle(formId, title) {
-  const { error } = await supabase
-    .from("forms")
-    .update({ title })
-    .eq("id", formId);
-  if (error) throw new Error(error.message);
+async function getAllResponses(formId) {
+  const pageSize = 1000;
+  const responses = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("responses")
+      .select("id, form_id, data, created_at")
+      .eq("form_id", formId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+
+    responses.push(...data);
+    if (data.length < pageSize) return responses;
+    offset += pageSize;
+  }
 }
 
 async function publishForm(formId) {
@@ -243,11 +205,11 @@ async function deleteForm(formId) {
 
 export {
   createForm,
-  saveFormFields,
+  saveFormDraft,
   getFormsByUser,
   getForm,
   getFormFields,
-  updateFormTitle,
+  getAllResponses,
   publishForm,
   unpublishForm,
   submitResponse,

@@ -171,8 +171,12 @@ function useFormBuilderPage() {
       setIsDraftActive(false);
       reset(values);
       toast.success("Form saved successfully!");
-    } catch {
-      toast.error("Failed to save form. Please try again.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? `Failed to save form: ${error.message}`
+          : "Failed to save form. Please try again.",
+      );
     }
   }
 

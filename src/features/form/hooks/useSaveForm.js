@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import useAuth from "../../Auth/useAuth";
-import { saveFormFields, updateFormTitle } from "../services/formsService";
+import { saveFormDraft } from "../services/formsService";
 
 function useSaveForm(formId) {
   const { user } = useAuth();
@@ -10,13 +10,7 @@ function useSaveForm(formId) {
 
   return useMutation({
     mutationFn: async (values) => {
-      const fieldsWithOrder = (values.fields || []).map((field, index) => ({
-        ...field,
-        order: index + 1,
-      }));
-
-      await saveFormFields(formId, fieldsWithOrder);
-      await updateFormTitle(formId, values.title);
+      await saveFormDraft(formId, values.title, values.fields || []);
 
       return values;
     },

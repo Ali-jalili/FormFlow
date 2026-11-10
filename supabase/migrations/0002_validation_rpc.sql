@@ -43,7 +43,13 @@ begin
   loop
     v_ans := p_data -> v_field.id::text;
 
-    if v_field.required and (v_ans is null or v_ans = '""'::jsonb) then
+    if v_field.required and (
+      v_ans is null
+      or (
+        jsonb_typeof(v_ans) = 'string'
+        and btrim(v_ans #>> '{}') = ''
+      )
+    ) then
       raise exception 'Field "%" is required', v_field.label using errcode = '23514';
     end if;
 

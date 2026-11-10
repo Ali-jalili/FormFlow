@@ -5,31 +5,39 @@ and the server-side validation RPC for FormFlow.
 
 ## Contents
 
-| File                                         | Purpose                                                                                              |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `migrations/0001_initial_schema.sql`         | Tables (`forms`, `form_fields`, `responses`), indexes, `updated_at` trigger, and RLS policies.       |
-| `migrations/0002_validation_rpc.sql`         | `public.submit_form_response(text, jsonb)` — validates submissions server-side inside a transaction. |
-| `migrations/0003_restrict_direct_insert.sql` | Drops the direct-insert policy on `responses`, making the RPC the only write path.                   |
-| `migrations/0004_column_grants.sql`          | Column-level grants: `anon` can only read a public-safe column set on `forms` / `form_fields`.       |
+| File                                            | Purpose |
+| ----------------------------------------------- | ------- |
+| `migrations/0001_initial_schema.sql`            | Tables, indexes, updated-at trigger, and RLS policies. |
+| `migrations/0002_validation_rpc.sql`            | Server-side validation for public response submissions. |
+| `migrations/0003_restrict_direct_insert.sql`    | Makes the submission RPC the only response-write path. |
+| `migrations/0004_column_grants.sql`             | Restricts anonymous reads to public-safe form columns. |
+| `migrations/0005_published_snapshot.sql`        | Optional schema column for a future frozen publish snapshot. |
+| `migrations/0006_drop_is_saved.sql`             | Removes the unused legacy saved flag. |
+| `migrations/0007_atomic_form_save.sql`          | Atomically saves a form title and its fields through one owner-only RPC. |
+| `migrations/0008_paginated_response_search.sql` | Adds owner-only server pagination and question/answer search. |
+| `migrations/0009_required_whitespace_validation.sql` | Rejects whitespace-only answers to required questions on the server. |
 
 ## How to apply
 
-If your Supabase project was **not** created with these migrations:
+For a fresh project:
 
 1. Open the Supabase dashboard → **SQL Editor**.
-2. Run them **in this order** (each is idempotent):
-   1. `migrations/0001_initial_schema.sql`
-   2. `migrations/0002_validation_rpc.sql`
-   3. `migrations/0003_restrict_direct_insert.sql`
-   4. `migrations/0004_column_grants.sql`
-3. After step 3, the RPC is the **only** way to submit a response — direct
-   inserts into `responses` are no longer possible. The client calls it as:
+2. Run all migrations **in order** (each is idempotent), from
+   `0001_initial_schema.sql` through `0009_required_whitespace_validation.sql`.
+   Migrations `0007` and `0008` are required for form saving and response
+   browsing; `0009` tightens the existing submission validation.
+3. After applying `0003`, the submission RPC is the **only** way to submit a
+   response — direct inserts into `responses` are no longer possible. The
+   client calls it as:
    ```js
    const responseId = await supabase.rpc("submit_form_response", {
      p_public_id: publicId,   // TEXT
      p_data: answers,         // JSONB object keyed by field id
    });
    ```
+
+For an existing project, apply only migrations not already installed, in order,
+through `0009_required_whitespace_validation.sql`.
 
 ## Security model
 
@@ -45,6 +53,11 @@ If your Supabase project was **not** created with these migrations:
   bypassed.
 - **Column grants** — 0004 revokes the blanket `select` and grants anon a
   fixed, public-safe column set on `forms` and `form_fields`.
+- **Atomic saves** — `save_form_draft` is `SECURITY INVOKER`, is executable
+  only by authenticated users, and uses the existing owner RLS policies.
+  PostgreSQL rolls back the title and field changes together if any write fails.
+- **Response browsing** — `get_form_responses_page` is also `SECURITY INVOKER`
+  and authenticated-only; response rows and counts remain subject to RLS.
 
-> RLS is enabled on every table. `security definer` on the RPC reads the form
-> row as `postgres` but only ever returns the new response `id`.
+> RLS is enabled on every table. `submit_form_response` uses `SECURITY DEFINER`
+> to read the published form and only returns the new response `id`.

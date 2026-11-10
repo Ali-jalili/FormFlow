@@ -29,7 +29,7 @@ function AppLayout() {
   return (
     <>
       <Toaster position="top-right" />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       <div
         className={
           isFormBuilder

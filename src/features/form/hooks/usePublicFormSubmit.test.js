@@ -44,6 +44,23 @@ describe("usePublicFormSubmit validation", () => {
     expect(submitResponse).not.toHaveBeenCalled();
   });
 
+  it("flags a required field containing only whitespace", async () => {
+    const { result } = renderHook(() =>
+      usePublicFormSubmit("pub-1", [requiredShort]),
+    );
+
+    act(() => {
+      result.current.updateAnswer("f1", "   ");
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(result.current.fieldErrors.f1).toMatch(/required/i);
+    expect(submitResponse).not.toHaveBeenCalled();
+  });
+
   it("flags a multiple-choice answer that is not one of the options", async () => {
     const { result } = renderHook(() =>
       usePublicFormSubmit("pub-1", [choiceField]),
