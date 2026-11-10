@@ -112,7 +112,8 @@ function PublicFormPage() {
     setSubmitError(null);
 
     try {
-      await submitResponse(data.form.id, answers);
+      // The RPC validates server-side and returns the new response id.
+      await submitResponse(publicId, answers);
 
       toast.success("Response submitted!");
 
@@ -120,7 +121,6 @@ function PublicFormPage() {
       setAnswers({});
       setFieldErrors({});
     } catch (error) {
-      console.error("Submit error:", error);
       setSubmitError(
         error?.message || "Failed to submit response. Please try again.",
       );

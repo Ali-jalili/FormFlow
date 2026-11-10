@@ -204,15 +204,25 @@ function sanitizeAnswers(answers) {
   return cleaned;
 }
 
-async function submitResponse(formId, answers) {
+/**
+ * Submissions go through the `submit_form_response` RPC
+ * (supabase/migrations/0002_validation_rpc.sql) — the only sanctioned
+ * write path for responses. Server-side validation (required fields,
+ * answer types, size limits) runs inside a single Postgres transaction.
+ */
+async function submitResponse(publicId, answers) {
   const data = sanitizeAnswers(answers);
 
-  const { error } = await supabase.from("responses").insert({
-    form_id: formId,
-    data,
-  });
+  const { data: responseId, error } = await supabase.rpc(
+    "submit_form_response",
+    {
+      p_public_id: publicId,
+      p_data: data,
+    },
+  );
 
   if (error) throw new Error(error.message);
+  return responseId;
 }
 
 async function deleteForm(formId) {

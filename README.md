@@ -54,8 +54,19 @@ A modern full-stack form builder built with React and Supabase, enabling users t
 ## 🗄️ Database & Security
 
 - Schema, indexes and RLS policies live in [`supabase/migrations`](./supabase/migrations) — see [`supabase/README.md`](./supabase/README.md) for the security model and setup.
-- Every table has RLS enabled. Anonymous visitors can only read a published form's minimal columns and submit responses through the validated RPC; owners manage their own forms, fields and responses.
-- `.env.example` documents the required `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` variables.
+- Every table has RLS enabled. Anonymous visitors can only read a published form's minimal columns; owners manage their own forms, fields and responses.
+
+**Applying migrations (in order):**
+
+1. `0001_initial_schema.sql` — tables, indexes, `updated_at` trigger, RLS policies.
+2. `0002_validation_rpc.sql` — the `submit_form_response` RPC (server-side validation).
+3. `0003_restrict_direct_insert.sql` — drops the direct-insert policy on `responses`.
+4. `0004_column_grants.sql` — column-level grants limiting what `anon` can read.
+
+> After step 3, **the RPC is the only way to submit a response** — direct
+> inserts into `responses` are no longer possible, so validation cannot be
+> bypassed. These files are not auto-applied; run each one in the Supabase
+> SQL editor (Dashboard → SQL Editor).
 
 ---
 
