@@ -10,7 +10,7 @@ import {
   Type,
 } from "lucide-react";
 
-import { FORM_FIELD_TYPES } from "../utils/form.types";
+import { FORM_FIELD_TYPES } from "../utils/form.constants";
 
 const FIELD_OPTIONS = [
   {

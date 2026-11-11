@@ -1,7 +1,7 @@
 /** @format */
 
 import { Circle } from "lucide-react";
-import { FORM_FIELD_TYPES } from "../utils/form.types";
+import { FORM_FIELD_TYPES } from "../utils/form.constants";
 
 function FormPreviewField({ field }) {
   return (

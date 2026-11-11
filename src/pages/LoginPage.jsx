@@ -1,16 +1,22 @@
 /** @format */
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { ArrowRight, Eye, EyeOff, Lock, LogIn, Mail } from "lucide-react";
 
 import useAuth from "../features/Auth/useAuth";
+import AuthLayout from "../components/auth/AuthLayout";
 
 function LoginPage() {
   const { handleLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // When arriving via a ProtectedRoute redirect, return the user to the
+  // page they originally tried to reach instead of the dashboard.
+  const redirectTo = location.state?.from || "/dashboard";
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -31,25 +37,14 @@ function LoginPage() {
       await handleLogin(formData.email, formData.password);
 
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       toast.error(error.message || "Unable to log in. Please try again.");
     }
   }
 
   return (
-    <main className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 px-4 py-12 sm:py-16">
-      {/* Background decoration */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-indigo-200/20 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-purple-200/20 blur-3xl"
-      />
-
-      <section className="relative w-full max-w-md animate-[fadeIn_.4s_ease-out]">
+    <AuthLayout>
         <div className="rounded-3xl border border-gray-100 bg-white/90 p-6 shadow-xl shadow-gray-200/50 backdrop-blur-sm sm:p-8">
           {/* Header */}
           <div className="text-center">
@@ -226,8 +221,7 @@ function LoginPage() {
             </Link>
           </p>
         </div>
-      </section>
-    </main>
+    </AuthLayout>
   );
 }
 

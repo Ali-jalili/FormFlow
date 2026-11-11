@@ -20,7 +20,7 @@ import {
 
 import SortableField from "./SortableField";
 import AddFieldSelect from "./AddFieldSelect";
-import { FORM_FIELD_TYPES } from "../utils/form.types";
+import { FORM_FIELD_TYPES } from "../utils/form.constants";
 import { LayoutGrid, Layers } from "lucide-react";
 
 export default function FormFieldsEditor() {
@@ -94,6 +94,10 @@ export default function FormFieldsEditor() {
           </span>
         </div>
         <AddFieldSelect onAddField={handleAddField} />
+        <p className="mt-2 text-xs text-slate-400">
+          Drag questions to change their order. Your changes are saved as a
+          local draft until you save.
+        </p>
       </div>
 
       <DndContext
@@ -144,6 +148,15 @@ export default function FormFieldsEditor() {
             Select a field type from the panel above to start building your
             form.
           </p>
+        </div>
+      )}
+
+      {fields.length > 0 && (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 p-4">
+          <p className="mb-3 text-center text-xs text-slate-500">
+            Need another question? Add it here without scrolling back up.
+          </p>
+          <AddFieldSelect onAddField={handleAddField} />
         </div>
       )}
     </div>

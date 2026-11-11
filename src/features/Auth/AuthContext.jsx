@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useState } from "react";
 import { createContext } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { supabase } from "../../lib/supabaseClient";
 
 const AuthContext = createContext();
@@ -10,6 +12,7 @@ const AuthContext = createContext();
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -40,7 +43,7 @@ function AuthProvider({ children }) {
     });
 
     if (error) {
-      throw error;
+      throw new Error(error.message);
     }
 
     setUser(data.user);
@@ -55,15 +58,36 @@ function AuthProvider({ children }) {
       options: { data: { name } },
     });
 
-    if (error) throw error;
-    return data.user;
+    if (error) throw new Error(error.message);
+
+    // When email confirmation is enabled, Supabase creates the account but
+    // no session exists yet — report that so the UI can tell the user to
+    // confirm their email before logging in.
+    return {
+      user: data.user,
+      session: data.session,
+      needsEmailConfirmation: !data.session,
+    };
   }
 
-  async function handlelogout() {
-    await supabase.auth.signOut();
+  async function handleLogout() {
+    // Drop any per-user caches so the next sign-in never sees stale data.
+    queryClient.clear();
+
+    // Remove all builder drafts / dismissed-banner keys from this browser.
+    const keysToRemove = Object.keys(localStorage).filter(
+      (key) =>
+        key.startsWith("form-draft-") ||
+        key.startsWith("published-banner-dismissed-"),
+    );
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(error.message);
   }
 
-  const value = { user, isLoading, handleLogin, handleSignup, handlelogout };
+  const value = { user, isLoading, handleLogin, handleSignup, handleLogout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

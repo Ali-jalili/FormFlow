@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Circle, GripVertical, Trash2, X, Plus } from "lucide-react";
 import { useController, useFormContext } from "react-hook-form";
 
-import { FORM_FIELD_TYPES } from "../utils/form.types";
+import { FORM_FIELD_TYPES } from "../utils/form.constants";
 
 function SortableField({ field, index, onRemove, isOverlay = false }) {
   const { control } = useFormContext();

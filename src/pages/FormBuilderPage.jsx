@@ -22,9 +22,12 @@ function FormBuilderPage() {
     dismissPublishedBanner,
     handleSave,
     handlePublish,
+    handleUnpublish,
     navigate,
     isSaving,
     isPublishing,
+    isUnpublishing,
+    isPublished,
     showUnsaved,
     canPublish,
   } = useFormBuilderPage();
@@ -39,7 +42,7 @@ function FormBuilderPage() {
 
   return (
     <FormProvider {...formMethods}>
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
         <FormBuilderHeader
           title={title}
           onTitleChange={(newTitle) =>
@@ -52,8 +55,11 @@ function FormBuilderPage() {
           showPreview={showPreview}
           onSave={formMethods.handleSubmit(handleSave)}
           onPublish={handlePublish}
+          onUnpublish={handleUnpublish}
           isSaving={isSaving}
           isPublishing={isPublishing}
+          isUnpublishing={isUnpublishing}
+          isPublished={isPublished}
           isDirty={showUnsaved}
           canPublish={canPublish}
         />
@@ -63,7 +69,7 @@ function FormBuilderPage() {
           onDismiss={dismissPublishedBanner}
         />
 
-        <main className="relative flex flex-1 overflow-hidden">
+        <main className="relative flex min-h-0 flex-1 overflow-hidden">
           <div
             className={`
               w-full flex-1 overflow-y-auto transition-all duration-300 lg:block lg:w-1/2 lg:border-r lg:border-slate-200/80

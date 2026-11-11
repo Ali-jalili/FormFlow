@@ -1,30 +1,18 @@
-/** @format */
+﻿/** @format */
 
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import DeleteFormModal from "../../../components/ui/DeleteFormModal";
-import {
-  Calendar,
-  Edit3,
-  BarChart3,
-  Trash2,
-  ExternalLink,
-  CheckCircle2,
-  FileText,
-  Clock,
-} from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
+import FormCardActions from "./FormCardActions";
+import useDeleteForm from "../hooks/useDeleteForm";
+import { Calendar, CheckCircle2, FileText } from "lucide-react";
 import { useState } from "react";
-import { deleteForm } from "../services/formsService";
-import useAuth from "../../Auth/useAuth";
 
 function FormCard({ dataForm }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { mutateAsync: confirmDelete, isPending: isDeleting } = useDeleteForm(
+    dataForm.id,
+  );
 
   const isPublished = dataForm.is_published;
 
@@ -44,21 +32,11 @@ function FormCard({ dataForm }) {
   }
 
   async function handleDeleteConfirm() {
-    setIsDeleting(true);
-
     try {
-      await deleteForm(dataForm.id);
-
-      queryClient.invalidateQueries({
-        queryKey: ["forms", user.id],
-      });
-
-      toast.success("Form deleted successfully!");
+      await confirmDelete();
       setShowDeleteModal(false);
     } catch {
-      toast.error("Failed to delete form.");
-    } finally {
-      setIsDeleting(false);
+      // The mutation reports failures through its onError callback.
     }
   }
 
@@ -177,120 +155,7 @@ function FormCard({ dataForm }) {
         </div>
 
         {/* Footer Actions Section */}
-        <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-3.5">
-          {/* Public Link Action */}
-          <div>
-            {isPublished && dataForm.public_id ? (
-              <button
-                type="button"
-                onClick={handlePublicForm}
-                className="
-                  inline-flex
-                  items-center
-                  gap-1.5
-                  rounded-lg
-                  px-2
-                  py-1
-                  text-xs
-                  font-semibold
-                  text-indigo-600
-                  transition-all
-                  duration-200
-                  hover:bg-indigo-50
-                  hover:text-indigo-700
-                  active:scale-95
-                "
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                View form
-              </button>
-            ) : (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400">
-                <Clock className="h-3 w-3" />
-                Not published
-              </span>
-            )}
-          </div>
-
-          {/* Right Action Icons */}
-          <div className="flex items-center gap-1">
-            {/* Edit Button */}
-            <Link
-              to={`/builder/${dataForm.id}`}
-              aria-label="Edit form"
-              title="Edit form"
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                text-slate-400
-                transition-all
-                duration-200
-                hover:bg-slate-100
-                hover:text-indigo-600
-                active:scale-95
-              "
-            >
-              <Edit3 className="h-4 w-4" />
-            </Link>
-
-            {/* View Responses Button */}
-            {isPublished && (
-              <button
-                type="button"
-                onClick={handleResponses}
-                aria-label="View responses"
-                title="View responses"
-                className="
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-lg
-                  text-slate-400
-                  transition-all
-                  duration-200
-                  hover:bg-emerald-50
-                  hover:text-emerald-600
-                  active:scale-95
-                "
-              >
-                <BarChart3 className="h-4 w-4" />
-              </button>
-            )}
-
-            {/* Delete Button */}
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              aria-label="Delete form"
-              title="Delete form"
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                text-slate-400
-                transition-all
-                duration-200
-                hover:bg-rose-50
-                hover:text-rose-600
-                active:scale-95
-                disabled:cursor-not-allowed
-                disabled:opacity-40
-              "
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <FormCardActions dataForm={dataForm} isPublished={isPublished} onOpenPublicForm={handlePublicForm} onOpenResponses={handleResponses} onDelete={handleDelete} isDeleting={isDeleting} />
       </article>
 
       {/* Delete confirmation modal */}

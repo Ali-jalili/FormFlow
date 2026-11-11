@@ -6,6 +6,7 @@ import {
   Edit3,
   Eye,
   Globe,
+  GlobeOff,
   Loader2,
   Save,
 } from "lucide-react";
@@ -18,8 +19,11 @@ function FormBuilderHeader({
   showPreview,
   onSave,
   onPublish,
+  onUnpublish,
   isSaving,
   isPublishing,
+  isUnpublishing,
+  isPublished,
   isDirty,
   canPublish,
 }) {
@@ -131,6 +135,26 @@ function FormBuilderHeader({
               {isPublishing ? "Publishing..." : "Publish"}
             </span>
           </button>
+
+          {isPublished && (
+            <button
+              type="button"
+              onClick={onUnpublish}
+              disabled={isUnpublishing}
+              title="Unpublish this form"
+              className="group inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:text-sm"
+            >
+              {isUnpublishing ? (
+                <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+              ) : (
+                <GlobeOff className="h-4 w-4 text-slate-500 transition-transform duration-200 group-hover:scale-105" />
+              )}
+
+              <span className="hidden sm:inline">
+                {isUnpublishing ? "Unpublishing..." : "Unpublish"}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </header>

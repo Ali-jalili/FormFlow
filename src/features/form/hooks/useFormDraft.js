@@ -1,11 +1,14 @@
 /** @format */
 
 import { useCallback, useEffect, useMemo } from "react";
+import { useWatch } from "react-hook-form";
 
-function useFormDraft(formId, watch, enabled = false) {
+function useFormDraft(formId, control, enabled = false, namespace) {
+  // Namespacing by the signed-in user keeps drafts of different accounts
+  // on the same browser from ever leaking into each other.
   const draftKey = useMemo(
-    () => (formId ? `form-draft-${formId}` : null),
-    [formId],
+    () => (formId ? `form-draft-${namespace ?? ""}-${formId}` : null),
+    [formId, namespace],
   );
 
   const getDraft = useCallback(() => {
@@ -22,7 +25,7 @@ function useFormDraft(formId, watch, enabled = false) {
     }
   }, [draftKey]);
 
-  const formValues = watch();
+  const formValues = useWatch({ control });
 
   useEffect(() => {
     if (!draftKey || !enabled) return;
