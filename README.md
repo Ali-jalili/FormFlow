@@ -21,8 +21,36 @@ Build a form, publish it, and collect responses — no install required.
 - Full CRUD operations for forms, fields, and responses
 - Public form submission
 - Secure anonymous access
-- Responses dashboard with dynamic field mapping
+- Responses dashboard with dynamic field mapping, search and pagination
 - Responsive user interface
+
+---
+
+## 🏛️ Architecture
+
+```mermaid
+flowchart LR
+  UI[React UI\nHome · Builder · Public · Responses]
+  H[Hooks\nusePublicForm · useSaveForm · useResponses]
+  SVC[Services\nformsService · responsesService]
+  PGR[(Postgres + RLS)]
+  RPC1[save_form_draft\natomic save]
+  RPC2[submit_form_response\ntransactional write]
+  RPC3[get_form_responses_page\npagination + search]
+  CACHE[React Query cache]
+
+  UI --> H --> SVC
+  SVC -->|CRUD + .order()| PGR
+  SVC --> RPC1
+  SVC --> RPC2
+  SVC --> RPC3
+  PGR -->|rows| CACHE --> UI
+```
+
+The client never writes responses directly: it calls a **Postgres RPC** that
+validates the submission inside a transaction and enforces the security rules
+below. Form saves and response browsing are also RPC-driven, so partial
+writes and unauthorized reads are impossible from the browser.
 
 ---
 
@@ -30,31 +58,44 @@ Build a form, publish it, and collect responses — no install required.
 
 ### Frontend
 
-- React
-- JavaScript
-- React Router
-- TanStack React Query
-- Context API
-- useReducer
+- React 19 · Vite · Tailwind CSS
+- React Router v6 (lazy-loaded routes)
+- TanStack React Query (server state, caching, background refresh)
+- React Hook Form (builder + validation)
+- dnd-kit (drag-and-drop field reordering)
+- Context API (auth session)
 
 ### Backend
 
-- Supabase
-- PostgreSQL
-- Supabase Authentication
-- Row Level Security (RLS)
+- Supabase (PostgreSQL + Auth + Row Level Security)
+- Custom Postgres RPCs for atomic saves, validated writes and paginated reads
+- Column-level grants restricting what anonymous visitors can read
 
 ---
 
 ## ✨ Project Highlights
 
-- Built a dynamic form builder supporting multiple field types with drag-and-drop interactions.
-- Designed a scalable database schema using JSON-based field configurations and flexible response storage.
-- Implemented full CRUD functionality for forms, fields, and responses using Supabase.
-- Managed complex client-side state using Context API and useReducer.
-- Managed server state with TanStack React Query, including caching, synchronization, and background updates.
-- Implemented a draft/publish workflow with dirty state tracking.
-- Developed secure public form submission with backend validation.
+- **Drag-and-drop form builder** with three field types (short text, long text,
+  multiple choice) and a live preview, powered by dnd-kit.
+- **Atomic form saves** through the `save_form_draft` Postgres RPC — a failed
+  save can never leave a form with missing or duplicated fields.
+- **RPC-only response writes** via `submit_form_response`: required fields,
+  answer types and size limits are enforced server-side inside one
+  transaction, so client-side validation can't be bypassed.
+- **Server-side response pagination + keyword search** in a single
+  `security invoker` function (`get_form_responses_page`), so heavy work stays
+  in Postgres and RLS is preserved on every page.
+- **Defense-in-depth for anonymous visitors:** Row Level Security plus
+  column-level grants mean a public-form reader can never see the owner's
+  `user_id` or anyone else's responses.
+- **Stable public links:** publishing is idempotent (the same `public_id`
+  survives re-publish), and an explicit **unpublish** action deactivates the
+  link without deleting data.
+- **Draft workflow** stored in `localStorage`, namespaced per user, with
+  dirty-state tracking and a safe merge when the server has changed.
+- **38 Vitest + Testing Library tests** (unit + integration) and a
+  **GitHub Actions CI** pipeline (Node 24, pnpm) running lint, build and
+  tests on every change.
 
 ---
 
@@ -64,9 +105,9 @@ Build a form, publish it, and collect responses — no install required.
 git clone https://github.com/Ali-jalili/FormFlow.git
 cd FormFlow
 
-npm install
-
-npm run dev
+nvm use          # selects Node 24 (see .nvmrc)
+pnpm install     # frozen lockfile
+pnpm dev         # start the dev server
 ```
 
 ---
