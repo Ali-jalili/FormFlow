@@ -6,7 +6,9 @@ A modern full-stack form builder built with React and Supabase, enabling users t
 
 ## 🌐 Live Demo
 
-[https://YOUR_FORMFLOW_DEMO_URL](https://form-flow-fawn.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Deployed%20on%20Vercel?style=for-the-badge&color=6366f1&logo=vercel&labelColor=111827)](https://form-flow-fawn.vercel.app/)
+
+Build a form, publish it, and collect responses — no install required.
 
 ---
 
