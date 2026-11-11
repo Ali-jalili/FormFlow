@@ -1,5 +1,7 @@
 # FormFlow
 
+[![CI](https://github.com/Ali-jalili/FormFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-jalili/FormFlow/actions/workflows/ci.yml)
+
 A modern full-stack form builder built with React and Supabase, enabling users to create, publish, and manage dynamic forms with flexible field configurations and response management.
 
 ## 🌐 Live Demo
