@@ -30,21 +30,21 @@ Build a form, publish it, and collect responses — no install required.
 
 ```mermaid
 flowchart LR
-  UI[React UI\nHome · Builder · Public · Responses]
-  H[Hooks\nusePublicForm · useSaveForm · useResponses]
-  SVC[Services\nformsService · responsesService]
-  PGR[(Postgres + RLS)]
-  RPC1[save_form_draft\natomic save]
-  RPC2[submit_form_response\ntransactional write]
-  RPC3[get_form_responses_page\npagination + search]
-  CACHE[React Query cache]
+  UI["React UI"]
+  H["Hooks"]
+  SVC["Services"]
+  PGR[("Postgres / RLS")]
+  RPC1["save_form_draft"]
+  RPC2["submit_form_response"]
+  RPC3["get_form_responses_page"]
+  CACHE["React Query cache"]
 
   UI --> H --> SVC
-  SVC -->|CRUD + .order()| PGR
+  SVC --> PGR
   SVC --> RPC1
   SVC --> RPC2
   SVC --> RPC3
-  PGR -->|rows| CACHE --> UI
+  PGR --> CACHE --> UI
 ```
 
 The client never writes responses directly: it calls a **Postgres RPC** that
