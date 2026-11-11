@@ -11,7 +11,7 @@ vi.mock("../hooks/useResponses", () => ({
 }));
 vi.mock("../hooks/useFormFields", () => ({ default: vi.fn() }));
 vi.mock("../hooks/useForms", () => ({ default: vi.fn() }));
-vi.mock("../services/formsService", () => ({
+vi.mock("../services/responsesService", () => ({
   getAllResponses: vi.fn(),
 }));
 

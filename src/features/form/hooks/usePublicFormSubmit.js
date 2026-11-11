@@ -3,7 +3,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 
-import { submitResponse } from "../services/formsService";
+import { submitResponse } from "../services/responsesService";
 import { FORM_FIELD_TYPES } from "../utils/form.constants";
 
 /**

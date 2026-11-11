@@ -79,27 +79,6 @@ async function getFormFields(formId) {
   return data;
 }
 
-async function getAllResponses(formId) {
-  const pageSize = 1000;
-  const responses = [];
-  let offset = 0;
-
-  while (true) {
-    const { data, error } = await supabase
-      .from("responses")
-      .select("id, form_id, data, created_at")
-      .eq("form_id", formId)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + pageSize - 1);
-
-    if (error) throw new Error(error.message);
-
-    responses.push(...data);
-    if (data.length < pageSize) return responses;
-    offset += pageSize;
-  }
-}
-
 async function publishForm(formId) {
   // Reuse the existing public_id when available so previously shared
   // links never break on re-publish.
@@ -131,67 +110,6 @@ async function unpublishForm(formId) {
   if (error) throw new Error(error.message);
 }
 
-const MAX_ANSWER_KEYS = 100;
-const MAX_ANSWER_LENGTH = 10_000;
-
-/**
- * Client-side guard rails before hitting the table.
- * (Real server-side validation is provided by the `submit_form_response`
- * RPC — see supabase/migrations.)
- */
-function sanitizeAnswers(answers) {
-  if (answers === null || answers === undefined || Array.isArray(answers)) {
-    throw new Error("Answers must be an object keyed by field id.");
-  }
-
-  const cleaned = {};
-
-  for (const [key, value] of Object.entries(answers)) {
-    if (typeof key !== "string" || key.length > 64) continue;
-
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed !== "") cleaned[key] = trimmed.slice(0, MAX_ANSWER_LENGTH);
-    } else if (value !== null && value !== undefined) {
-      cleaned[key] = String(value).slice(0, MAX_ANSWER_LENGTH);
-    }
-  }
-
-  const keys = Object.keys(cleaned);
-
-  if (keys.length === 0) {
-    throw new Error("No answers to submit.");
-  }
-
-  // Guard against oversized payloads / spam.
-  if (keys.length > MAX_ANSWER_KEYS) {
-    throw new Error("Too many answers in this response.");
-  }
-
-  return cleaned;
-}
-
-/**
- * Submissions go through the `submit_form_response` RPC
- * (supabase/migrations/0002_validation_rpc.sql) — the only sanctioned
- * write path for responses. Server-side validation (required fields,
- * answer types, size limits) runs inside a single Postgres transaction.
- */
-async function submitResponse(publicId, answers) {
-  const data = sanitizeAnswers(answers);
-
-  const { data: responseId, error } = await supabase.rpc(
-    "submit_form_response",
-    {
-      p_public_id: publicId,
-      p_data: data,
-    },
-  );
-
-  if (error) throw new Error(error.message);
-  return responseId;
-}
-
 async function deleteForm(formId) {
   const { data, error } = await supabase
     .from("forms")
@@ -209,12 +127,7 @@ export {
   getFormsByUser,
   getForm,
   getFormFields,
-  getAllResponses,
   publishForm,
   unpublishForm,
-  submitResponse,
   deleteForm,
-  sanitizeAnswers,
-  MAX_ANSWER_KEYS,
-  MAX_ANSWER_LENGTH,
 };

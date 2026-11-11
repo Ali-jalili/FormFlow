@@ -1,7 +1,7 @@
 /** @format */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -13,6 +13,7 @@ import useFormDraft from "./useFormDraft";
 import useSaveForm from "./useSaveForm";
 import usePublishForm from "./usePublishForm";
 import useUnpublishForm from "./useUnpublishForm";
+import usePublishedFormBanner from "./usePublishedFormBanner";
 import {
   DEFAULT_FORM_VALUES,
   isDraftDifferentFromServer,
@@ -24,20 +25,18 @@ function useFormBuilderPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showPreview, setShowPreview] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState(null);
-  const [isDraftActive, setIsDraftActive] = useState(false);
   const formMethods = useForm({
     defaultValues: DEFAULT_FORM_VALUES,
     mode: "onChange",
   });
   const {
+    control,
     reset,
-    watch,
     getValues,
     formState: { isDirty },
   } = formMethods;
-  const title = watch("title");
-  const fields = watch("fields");
+  const title = useWatch({ control, name: "title" });
+  const fields = useWatch({ control, name: "fields" });
   const { data: formData, isLoading: formLoading } = useFormData(formId);
   const {
     data: fieldsData,
@@ -46,7 +45,7 @@ function useFormBuilderPage() {
   } = useFormFields(formId);
   const { clearDraft, getDraft } = useFormDraft(
     formId,
-    watch,
+    control,
     !!formData && fieldsFetched,
     user?.id,
   );
@@ -60,19 +59,32 @@ function useFormBuilderPage() {
   );
 
   const draftNotifiedRef = useRef(false);
+  const serverValues = {
+    title: formData?.title || "",
+    fields: fieldsData || [],
+  };
+  const isDraftActive = Boolean(
+    formId &&
+      fieldsFetched &&
+      formData &&
+      isDraftDifferentFromServer(getDraft(), serverValues),
+  );
+  const { publishedUrl, dismissPublishedBanner } = usePublishedFormBanner(
+    formId,
+    formData,
+  );
 
   useEffect(() => {
     if (!formId || !fieldsFetched || !formData) return;
 
-    const serverValues = {
+    const latestServerValues = {
       title: formData.title || "",
       fields: fieldsData || [],
     };
     const draft = getDraft();
 
-    if (isDraftDifferentFromServer(draft, serverValues)) {
+    if (isDraftDifferentFromServer(draft, latestServerValues)) {
       reset(draft);
-      setIsDraftActive(true);
 
       // Make stale drafts visible instead of silently winning over the
       // server state (which may have changed on another device).
@@ -87,8 +99,7 @@ function useFormBuilderPage() {
     }
 
     clearDraft();
-    reset(serverValues);
-    setIsDraftActive(false);
+    reset(latestServerValues);
   }, [
     formId,
     fieldsFetched,
@@ -98,37 +109,6 @@ function useFormBuilderPage() {
     reset,
     clearDraft,
   ]);
-
-  useEffect(() => {
-    // A form with a leftover public_id but is_published = false is
-    // unpublished — never show the live banner in that case.
-    if (!formData?.public_id || !formData?.is_published) {
-      setPublishedUrl(null);
-      return;
-    }
-
-    const dismissedPublicId = localStorage.getItem(
-      `published-banner-dismissed-${formId}`,
-    );
-
-    if (dismissedPublicId === formData.public_id) {
-      setPublishedUrl(null);
-      return;
-    }
-
-    setPublishedUrl(`${window.location.origin}/form/${formData.public_id}`);
-  }, [formData?.public_id, formData?.is_published, formId]);
-
-  function dismissPublishedBanner() {
-    if (formId && formData?.public_id) {
-      localStorage.setItem(
-        `published-banner-dismissed-${formId}`,
-        formData.public_id,
-      );
-    }
-
-    setPublishedUrl(null);
-  }
 
   useEffect(() => {
     return () => {
@@ -168,7 +148,6 @@ function useFormBuilderPage() {
     try {
       await saveForm(values);
       clearDraft();
-      setIsDraftActive(false);
       reset(values);
       toast.success("Form saved successfully!");
     } catch (error) {
@@ -194,10 +173,8 @@ function useFormBuilderPage() {
     }
 
     try {
-      const publicId = await publish();
+      await publish();
       clearDraft();
-      setIsDraftActive(false);
-      setPublishedUrl(`${window.location.origin}/form/${publicId}`);
       toast.success("Form published successfully!");
     } catch {
       toast.error("Failed to publish form.");
@@ -207,7 +184,6 @@ function useFormBuilderPage() {
   async function handleUnpublish() {
     try {
       await unpublish();
-      setPublishedUrl(null);
       toast.success("Form unpublished. The public link is now inactive.");
     } catch {
       toast.error("Failed to unpublish form.");

@@ -11,12 +11,12 @@ vi.mock("../hooks/usePublicForm", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("../services/formsService", () => ({
+vi.mock("../services/responsesService", () => ({
   submitResponse: vi.fn().mockResolvedValue("resp-1"),
 }));
 
 import usePublicForm from "../hooks/usePublicForm";
-import { submitResponse } from "../services/formsService";
+import { submitResponse } from "../services/responsesService";
 import PublicFormPage from "../../../pages/PublicFormPage";
 
 const publishedForm = {

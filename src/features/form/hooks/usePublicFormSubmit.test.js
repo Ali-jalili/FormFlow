@@ -3,11 +3,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
-vi.mock("../services/formsService", () => ({
+vi.mock("../services/responsesService", () => ({
   submitResponse: vi.fn().mockResolvedValue("resp-1"),
 }));
 
-import { submitResponse } from "../services/formsService";
+import { submitResponse } from "../services/responsesService";
 import usePublicFormSubmit from "./usePublicFormSubmit";
 import { FORM_FIELD_TYPES } from "../utils/form.constants";
 

@@ -12,11 +12,15 @@ vi.mock("../../../lib/supabaseClient", () => ({
 
 import {
   saveFormDraft,
+} from "./formsService";
+import {
   getAllResponses,
+} from "./responsesService";
+import {
   sanitizeAnswers,
   MAX_ANSWER_KEYS,
   MAX_ANSWER_LENGTH,
-} from "./formsService";
+} from "../utils/responseValidation";
 import { supabase } from "../../../lib/supabaseClient";
 import { FORM_FIELD_TYPES } from "../utils/form.constants";
 
